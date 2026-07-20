@@ -77,8 +77,9 @@ const formSchema = z
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords do not match.",
-    path: ["confirmPassword"], // Ensures the error attaches to confirmPassword
+    path: ["confirmPassword"],
   });
+
 type SignupFormValues = z.infer<typeof formSchema>;
 
 function FileDropField({
@@ -134,6 +135,7 @@ export function LoginForm() {
 
   const form = useForm<SignupFormValues>({
     resolver: zodResolver(formSchema),
+    shouldFocusError: false, // Prevents mobile browser auto-zoom on validation error focus
     defaultValues: {
       fullName: "",
       email: "",
@@ -238,7 +240,7 @@ export function LoginForm() {
                       aria-invalid={fieldState.invalid}
                       placeholder="John Doe"
                       autoComplete="name"
-                      className="rounded-xl border-neutral-200 text-sm h-11 focus-visible:ring-1 focus-visible:ring-neutral-400"
+                      className="rounded-xl border-neutral-200 text-base md:text-sm h-11 focus-visible:ring-1 focus-visible:ring-neutral-400"
                       style={
                         fieldState.invalid ? { borderColor: ACCENT } : undefined
                       }
@@ -269,7 +271,7 @@ export function LoginForm() {
                       aria-invalid={fieldState.invalid}
                       placeholder="john@example.com"
                       autoComplete="email"
-                      className="rounded-xl border-neutral-200 text-sm h-11 focus-visible:ring-1 focus-visible:ring-neutral-400"
+                      className="rounded-xl border-neutral-200 text-base md:text-sm h-11 focus-visible:ring-1 focus-visible:ring-neutral-400"
                       style={
                         fieldState.invalid ? { borderColor: ACCENT } : undefined
                       }
@@ -330,7 +332,7 @@ export function LoginForm() {
                             ? { borderColor: ACCENT }
                             : {}),
                         }}
-                        className="flex-1 !h-[44px] rounded-xl border-neutral-200 text-sm focus-visible:ring-1 focus-visible:ring-neutral-400"
+                        className="flex-1 !h-[44px] rounded-xl border-neutral-200 text-base md:text-sm focus-visible:ring-1 focus-visible:ring-neutral-400"
                       />
                     )}
                   />
@@ -361,7 +363,7 @@ export function LoginForm() {
                           aria-invalid={fieldState.invalid}
                           placeholder="••••••••"
                           autoComplete="new-password"
-                          className="rounded-xl border-neutral-200 text-sm h-11 pr-10 focus-visible:ring-1 focus-visible:ring-neutral-400"
+                          className="rounded-xl border-neutral-200 text-base md:text-sm h-11 pr-10 focus-visible:ring-1 focus-visible:ring-neutral-400"
                           style={
                             fieldState.invalid
                               ? { borderColor: ACCENT }
@@ -413,7 +415,7 @@ export function LoginForm() {
                           aria-invalid={fieldState.invalid}
                           placeholder="••••••••"
                           autoComplete="new-password"
-                          className="rounded-xl border-neutral-200 text-sm h-11 pr-10 focus-visible:ring-1 focus-visible:ring-neutral-400"
+                          className="rounded-xl border-neutral-200 text-base md:text-sm h-11 pr-10 focus-visible:ring-1 focus-visible:ring-neutral-400"
                           style={
                             fieldState.invalid
                               ? { borderColor: ACCENT }

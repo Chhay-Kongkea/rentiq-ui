@@ -24,6 +24,7 @@ export default function RootLayout({
 }>) {
   return (
     <html
+    
       lang="en"
       className={`${plusJakartaSans.variable} ${geistMono.variable} h-full antialiased`}
     >
