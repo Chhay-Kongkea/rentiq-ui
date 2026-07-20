@@ -65,21 +65,20 @@ const formSchema = z
     countryCode: z.string(),
     phoneNumber: z.string().min(6, "Phone number is required"),
     password: z.string().min(8, "Password must be at least 8 characters"),
-    confirmPassword: z.string(),
+    confirmPassword: z.string().min(1, "Please confirm your password"),
     frontPhoto: idPhotoSchema,
     backPhoto: idPhotoSchema,
-    agreeTerms: z.literal(true, {
-      errorMap: () => ({ message: "You must accept the Terms & Conditions." }),
+    agreeTerms: z.boolean().refine((val) => val === true, {
+      message: "You must accept the Terms & Conditions.",
     }),
-    agreePrivacy: z.literal(true, {
-      errorMap: () => ({ message: "You must accept the Privacy Policy." }),
+    agreePrivacy: z.boolean().refine((val) => val === true, {
+      message: "You must accept the Privacy Policy.",
     }),
   })
   .refine((data) => data.password === data.confirmPassword, {
-    path: ["confirmPassword"],
     message: "Passwords do not match.",
+    path: ["confirmPassword"], // Ensures the error attaches to confirmPassword
   });
-
 type SignupFormValues = z.infer<typeof formSchema>;
 
 function FileDropField({
@@ -144,9 +143,9 @@ export function LoginForm() {
       confirmPassword: "",
       frontPhoto: undefined,
       backPhoto: undefined,
-      agreeTerms: undefined,
-      agreePrivacy: undefined,
-    } as unknown as SignupFormValues,
+      agreeTerms: false,
+      agreePrivacy: false,
+    },
   });
 
   function onSubmit(data: SignupFormValues) {
