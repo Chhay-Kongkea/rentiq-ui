@@ -1,36 +1,119 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Rentiq Frontend
 
-## Getting Started
+Smart Rental Marketplace Platform
 
-First, run the development server:
+---
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## Overview
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Rentiq Frontend is the user interface of a smart rental marketplace platform that provides users with a simple and convenient way to access rental services.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+The frontend allows users to create accounts, manage profiles, view rental activities, check booking information, save favorite items, and receive notifications through a modern and responsive web application.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+---
 
-## Learn More
+# Completed Frontend Features
 
-To learn more about Next.js, take a look at the following resources:
+## Authentication
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- Login Page
+- Registration Page
+- Forgot Password Page
+- Form Validation Interface
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+---
 
-## Deploy on Vercel
+## Homepage
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- Landing Page
+- Navigation Bar
+- Platform Introduction
+- Responsive Layout
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+## User Profile
+
+### View Profile
+- Display user information
+- Profile overview
+
+### Edit Profile
+- Update personal information
+- Manage profile details
+
+---
+
+## Identity Verification
+
+- Identity Verification Page
+- Submit verification information
+- Verification status interface
+
+---
+
+## Wishlist
+
+- View saved rental items
+- Display favorite items
+- Manage wishlist
+
+---
+
+## Booking
+
+### Booking History
+- View previous bookings
+- Display booking records
+- Show booking status
+
+### Booking Detail
+- View booking information
+- Display rental details
+- Show booking status
+
+---
+
+## Notification System
+
+- Notification Center
+- Display user notifications
+- Read/unread notification interface
+
+---
+
+# Technology Stack
+
+## Frontend
+
+- Next.js
+- React
+- TypeScript
+- Tailwind CSS
+
+---
+
+# Frontend Progress
+
+| Module                     | Completion |
+|----------------------------|-----------:|
+| UX Research                | 80%        |
+| UI Design                  | 90%        |
+| Frontend Development       | 50%        |
+| Authentication             | 80%        |
+| Homepage                   | 80%        |
+| User Profile               | 70%        |
+| Edit Profile               | 70%        |
+| Identity Verification      | 60%        |
+| Wishlist                   | 60%        |
+| Booking History            | 60%        |
+| Booking Detail             | 60%        |
+| Notification System        | 60%        |
+
+---
+
+## Overall Frontend Completion
+
+**50% Completed**
+
+---
