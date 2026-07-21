@@ -51,7 +51,7 @@ export default function OperationModeSection() {
       <div className="mx-auto max-w-7xl relative z-10">
         {/* Section Header with Underline */}
         <div className="mb-24 text-center flex flex-col items-center">
-          <h2 className="text-3xl font-extrabold tracking-tight sm:text-4xl inline-block">
+          <h2 className="text-2xl font-bold tracking-tight sm:text-4xl inline-block">
             <span className="text-[#253C95]">Operation </span>
             <span className="text-[#FF2B2B]">Mode</span>
           </h2>

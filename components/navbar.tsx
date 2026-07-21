@@ -45,8 +45,8 @@ export default function Navbar() {
   const isActive = (path: string) => pathname === path;
 
   return (
-    <header className="w-full border-b border-gray-100 bg-white px-4 py-3 md:px-8">
-      <div className="mx-auto flex max-w-7xl flex-col gap-4">
+    <header className="pt-8 w-full border-b border-gray-100 bg-white px-4 py-3 md:px-8">
+      <div className="pb-4 mx-auto flex max-w-7xl flex-col gap-4">
         {/* TOP BAR */}
         <div className="flex items-center justify-between">
           {/* Logo */}

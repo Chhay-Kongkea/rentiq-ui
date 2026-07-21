@@ -27,7 +27,7 @@ export default function HomeBanner() {
   return (
     <section className="relative w-full">
       <div className="relative overflow-hidden shadow-sm">
-        {/* ✅ Dynamic src updates when currentIndex changes */}
+       
         <img
           src={bannerImages[currentIndex]}
           alt="Home Banner"

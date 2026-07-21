@@ -523,7 +523,7 @@ export default function HomePage() {
 
         <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-5 gap-6 pl-[18px] pr-[18px] sm:pl-8 sm:pr-8">
           <LocationCard
-            image="https://images.unsplash.com/photo-1541888946425-d0fbb18f844e?auto=format&fit=crop&w=600&q=80"
+            image="/img/sok.png"
             title="Sen sok"
             className="md:col-span-1 lg:col-span-1 md:row-span-2 min-h-[350px] md:min-h-[460px]"
           />
@@ -541,7 +541,7 @@ export default function HomePage() {
           </div>
           <div className="flex flex-col gap-6 md:col-span-1 lg:col-span-1">
             <LocationCard
-              image="/img/psar-thom.png"
+              image="/img/Bkk.png"
               title="BKK 1"
               className="h-[210px]"
             />
@@ -559,19 +559,14 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Rentals Near You Banner Component */}
       <RentalsNearYouBanner />
 
-      {/* Operation Mode Section (with S-curves and ope, ope1, ope2 assets) */}
       <OperationModeSection />
 
-      {/* Rent with Confidence Section */}
       <RentWithConfidenceSection />
 
-      {/* Ready to Rent Smarter Section */}
       <ReadyToRentSection />
 
-      {/* Footer Section */}
       <Footer />
     </main>
   );
