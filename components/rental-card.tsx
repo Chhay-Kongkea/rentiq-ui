@@ -58,7 +58,7 @@ export default function RentalCard({
         </div>
         <div className="flex items-center gap-1 shrink-0 font-semibold text-neutral-900">
           <Star className="size-3.5 fill-[#FFB800] text-[#FFB800]" />
-          <span>{rating.toFixed(1)}</span>
+         - <span>{rating.toFixed(1)}</span>
         </div>
       </div>
 
