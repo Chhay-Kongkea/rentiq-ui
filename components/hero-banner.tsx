@@ -25,9 +25,9 @@ export default function HomeBanner() {
   };
 
   return (
-    <section className="relative w-full">
-      <div className="relative overflow-hidden shadow-sm">
-       
+    <section className="mx-auto w-full max-w-7xl px-4 sm:px-8 my-6 bg-white">
+      <div className="relative overflow-hidden shadow-sm bg-white">
+        
         <img
           src={bannerImages[currentIndex]}
           alt="Home Banner"

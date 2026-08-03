@@ -362,7 +362,7 @@ export default function HomePage() {
 
   return (
     <main className="min-h-screen bg-white">
-      <HeroBanner />
+      <div className="mt-[-25]"><HeroBanner /></div>
       <CategoriesSection />
 
       {/* Featured Rentals Section */}

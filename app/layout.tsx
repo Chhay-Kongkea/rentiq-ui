@@ -29,8 +29,8 @@ export default function RootLayout({
       lang="en"
       className={`${plusJakartaSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full w-full bg-neutral-100 font-sans text-neutral-900">
-       <NavbarWrapper>{children}</NavbarWrapper>
+      <body className="min-h-full w-full bg-white font-sans text-neutral-900">
+        <NavbarWrapper>{children}</NavbarWrapper>
       </body>
     </html>
   );

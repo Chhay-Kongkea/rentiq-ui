@@ -72,7 +72,7 @@ export default function FavoritesPage() {
         {/* Page Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-extrabold tracking-tight text-slate-800">
-            <span className="text-[#3b82f6]">My </span>
+            <span className="text-[#253C95]">My </span>
             <span className="text-[#ef4444]">Favorites</span>
           </h1>
           {hasFavorites && (
