@@ -43,8 +43,8 @@ export default function OfferDetailPage({
 }) {
   return (
     <div className="min-h-screen bg-[#F2F4F7] text-[#1A2340]">
-      <SiteHeader />
-      <SearchBar />
+      {/* <SiteHeader />
+      <SearchBar /> */}
 
       <main className="mx-auto max-w-6xl px-6 pb-20 pt-8">
         <Link

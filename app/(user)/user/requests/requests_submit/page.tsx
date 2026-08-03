@@ -59,8 +59,8 @@ const steps = [
 export default function RequestSuccessPage() {
   return (
     <div className="min-h-screen bg-[#F2F4F7] text-[#1A2340]">
-      <SiteHeader />
-      <SearchBar />
+      {/* <SiteHeader />
+      <SearchBar /> */}
 
       <main className="mx-auto max-w-4xl px-6 pb-8 pt-14 text-center">
         <div className="relative mx-auto flex h-24 w-24 items-center justify-center">
@@ -133,7 +133,7 @@ export default function RequestSuccessPage() {
 
         <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
           <Link
-            href="/requests"
+            href="/user/requests/myrequests"
             className="w-full rounded-lg bg-[#E8402C] px-8 py-3 text-center text-sm font-semibold text-white transition hover:bg-[#d6371f] sm:w-auto"
           >
             View My Requests

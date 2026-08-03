@@ -88,8 +88,8 @@ export default function RequestDetailPage({
 
   return (
     <div className="min-h-screen bg-[#F2F4F7] text-[#1A2340]">
-      <SiteHeader />
-      <SearchBar />
+      {/* <SiteHeader />
+      <SearchBar /> */}
 
       <main className="mx-auto max-w-6xl px-6 pb-20 pt-10">
         <div className="flex flex-col items-start justify-between gap-4 border-b border-gray-200 pb-6 sm:flex-row sm:items-center">

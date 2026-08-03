@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
   Home,
@@ -53,9 +53,15 @@ const TABS = [
 
 type TabKey = (typeof TABS)[number]["key"];
 
-const REQUESTS: RequestCard[] = [
+// How many cards to show per page. Swap this for whatever page size your
+// API uses, or read it from a query param if you want it user-configurable.
+const PAGE_SIZE = 6;
+
+// Template cards used to synthesize demo data per tab/page. Replace this
+// entire block with a real fetch (e.g. `fetchRequests({ tab, page })`)
+// that returns { items, totalCount } from your API.
+const REQUEST_TEMPLATES: Omit<RequestCard, "id">[] = [
   {
-    id: "1",
     title: "Cinema Camera Rig",
     description:
       "Looking for a RED or ARRI kit for a 3-day indie film shoot in Downtown.",
@@ -69,7 +75,6 @@ const REQUESTS: RequestCard[] = [
     offerAvatars: 3,
   },
   {
-    id: "2",
     title: "Tesla Model 3",
     description:
       "Need a clean EV for a weekend road trip. Preferred with FSD enabled if...",
@@ -83,7 +88,6 @@ const REQUESTS: RequestCard[] = [
     offerAvatars: 2,
   },
   {
-    id: "3",
     title: "Heavy Duty Jackhammer",
     description:
       "Driveway renovation project. Need a reliable electric jackhammer for one...",
@@ -97,35 +101,6 @@ const REQUESTS: RequestCard[] = [
     offerAvatars: 0,
   },
   {
-    id: "4",
-    title: "Cinema Camera Rig",
-    description:
-      "Looking for a RED or ARRI kit for a 3-day indie film shoot in Downtown.",
-    budget: "$200 - $350 / day",
-    dates: "Oct 12 - Oct 15",
-    location: "Downtown Manhattan, NY",
-    status: "Urgent",
-    icon: Video,
-    iconBg: "bg-[#3E3226]",
-    offerCount: 8,
-    offerAvatars: 3,
-  },
-  {
-    id: "5",
-    title: "Tesla Model 3",
-    description:
-      "Need a clean EV for a weekend road trip. Preferred with FSD enabled if...",
-    budget: "$200 - $350 / day",
-    dates: "Oct 12 - Oct 15",
-    location: "Downtown Manhattan, NY",
-    status: "Active",
-    icon: Car,
-    iconBg: "bg-[#7A1F1F]",
-    offerCount: 2,
-    offerAvatars: 2,
-  },
-  {
-    id: "6",
     title: "DJ Deck & Speakers",
     description:
       "Need a Pioneer CDJ set and two high-powered PA speakers for a private...",
@@ -140,16 +115,39 @@ const REQUESTS: RequestCard[] = [
   },
 ];
 
+// Builds a page's worth of demo cards for a given tab. Replace with a real
+// data fetch keyed by (tabKey, page) — this only exists so pagination has
+// something to visibly page through.
+function getRequestsForPage(tabKey: TabKey, page: number): RequestCard[] {
+  const tab = TABS.find((t) => t.key === tabKey)!;
+  const start = (page - 1) * PAGE_SIZE;
+  const count = Math.max(0, Math.min(PAGE_SIZE, tab.count - start));
+
+  return Array.from({ length: count }, (_, i) => {
+    const template = REQUEST_TEMPLATES[(start + i) % REQUEST_TEMPLATES.length];
+    return { ...template, id: `${tabKey}-${start + i + 1}` };
+  });
+}
+
 export default function MyRequestsPage() {
   const [activeTab, setActiveTab] = useState<TabKey>("open");
   const [page, setPage] = useState(1);
-  const totalPages = 12;
+
+  const activeTabMeta = TABS.find((t) => t.key === activeTab)!;
+  const totalPages = Math.max(1, Math.ceil(activeTabMeta.count / PAGE_SIZE));
+
+  const requests = useMemo(
+    () => getRequestsForPage(activeTab, page),
+    [activeTab, page]
+  );
+
+  function handleTabChange(tab: TabKey) {
+    setActiveTab(tab);
+    setPage(1); // reset to page 1 whenever the tab (and its total) changes
+  }
 
   return (
     <div className="min-h-screen bg-[#F2F4F7] text-[#1A2340]">
-      <SiteHeader />
-      <SearchBar />
-
       <main className="mx-auto max-w-6xl px-6 pb-20 pt-12">
         <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
           <div>
@@ -162,7 +160,7 @@ export default function MyRequestsPage() {
             </p>
           </div>
           <Link
-            href="/requests/post_requests"
+            href="/user/requests/post_requests"
             className="flex shrink-0 items-center gap-2 rounded-full bg-[#E8402C] px-5 py-3 text-sm font-semibold text-white hover:bg-[#d6371f]"
           >
             <Plus className="h-4 w-4" />
@@ -177,7 +175,7 @@ export default function MyRequestsPage() {
               <button
                 key={tab.key}
                 type="button"
-                onClick={() => setActiveTab(tab.key)}
+                onClick={() => handleTabChange(tab.key)}
                 className={`flex items-center gap-2 border-b-2 pb-3 text-sm font-medium transition ${
                   isActive
                     ? "border-[#E8402C] text-[#E8402C]"
@@ -200,10 +198,16 @@ export default function MyRequestsPage() {
         </div>
 
         <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {REQUESTS.map((request) => (
+          {requests.map((request) => (
             <RequestListCard key={request.id} request={request} />
           ))}
         </div>
+
+        {requests.length === 0 && (
+          <p className="mt-16 text-center text-sm text-gray-400">
+            No {activeTabMeta.label.toLowerCase()} requests on this page.
+          </p>
+        )}
 
         <Pagination page={page} totalPages={totalPages} onChange={setPage} />
       </main>
@@ -286,7 +290,7 @@ function RequestListCard({ request }: { request: RequestCard }) {
           )}
         </div>
         <Link
-          href={`/requests/${request.id}`}
+          href="/user/requests/requests_detail"
           className="text-sm font-semibold text-[#E8402C] hover:underline"
         >
           {request.offerCount === 0
@@ -298,6 +302,50 @@ function RequestListCard({ request }: { request: RequestCard }) {
   );
 }
 
+// Standard "windowed" pagination range: always shows first, last, the
+// current page ± siblingCount, and collapses everything else into a
+// single "..." on each side once there's a gap worth collapsing.
+type PageItem = number | "left-ellipsis" | "right-ellipsis";
+
+function getPaginationRange(
+  current: number,
+  total: number,
+  siblingCount = 1
+): PageItem[] {
+  const totalVisible = siblingCount * 2 + 5; // first + last + current + 2*sibling + 2*ellipsis
+
+  if (totalVisible >= total) {
+    return Array.from({ length: total }, (_, i) => i + 1);
+  }
+
+  const leftSibling = Math.max(current - siblingCount, 1);
+  const rightSibling = Math.min(current + siblingCount, total);
+
+  const showLeftEllipsis = leftSibling > 2;
+  const showRightEllipsis = rightSibling < total - 1;
+
+  if (!showLeftEllipsis && showRightEllipsis) {
+    const leftCount = 3 + siblingCount * 2;
+    const leftRange = Array.from({ length: leftCount }, (_, i) => i + 1);
+    return [...leftRange, "right-ellipsis", total];
+  }
+
+  if (showLeftEllipsis && !showRightEllipsis) {
+    const rightCount = 3 + siblingCount * 2;
+    const rightRange = Array.from(
+      { length: rightCount },
+      (_, i) => total - rightCount + i + 1
+    );
+    return [1, "left-ellipsis", ...rightRange];
+  }
+
+  const middleRange = Array.from(
+    { length: rightSibling - leftSibling + 1 },
+    (_, i) => leftSibling + i
+  );
+  return [1, "left-ellipsis", ...middleRange, "right-ellipsis", total];
+}
+
 function Pagination({
   page,
   totalPages,
@@ -307,23 +355,26 @@ function Pagination({
   totalPages: number;
   onChange: (page: number) => void;
 }) {
-  const pages = [1, 2, 3, "...", totalPages];
+  const pages = getPaginationRange(page, totalPages);
+
+  if (totalPages <= 1) return null;
 
   return (
     <div className="mt-12 flex items-center justify-center gap-2">
       <button
         type="button"
         aria-label="Previous page"
+        disabled={page === 1}
         onClick={() => onChange(Math.max(1, page - 1))}
-        className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:bg-gray-50"
+        className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
       >
         <ChevronLeft className="h-4 w-4" />
       </button>
 
-      {pages.map((p, i) =>
-        p === "..." ? (
+      {pages.map((p) =>
+        p === "left-ellipsis" || p === "right-ellipsis" ? (
           <span
-            key={`ellipsis-${i}`}
+            key={p}
             className="flex h-9 w-9 items-center justify-center text-sm text-gray-400"
           >
             ...
@@ -332,7 +383,8 @@ function Pagination({
           <button
             key={p}
             type="button"
-            onClick={() => onChange(p as number)}
+            aria-current={page === p ? "page" : undefined}
+            onClick={() => onChange(p)}
             className={`flex h-9 w-9 items-center justify-center rounded-lg border text-sm font-medium ${
               page === p
                 ? "border-[#E8402C] bg-[#E8402C] text-white"
@@ -347,8 +399,9 @@ function Pagination({
       <button
         type="button"
         aria-label="Next page"
+        disabled={page === totalPages}
         onClick={() => onChange(Math.min(totalPages, page + 1))}
-        className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:bg-gray-50"
+        className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
       >
         <ChevronRight className="h-4 w-4" />
       </button>
@@ -405,33 +458,32 @@ function SiteHeader() {
   );
 }
 
-function SearchBar() {
-  return (
-    <div className="mx-auto max-w-4xl px-6 pt-8">
-      <div className="flex flex-col items-stretch divide-y divide-gray-200 rounded-3xl border border-gray-200 bg-white p-2 shadow-sm sm:flex-row sm:items-center sm:divide-x sm:divide-y-0">
-        <div className="flex-1 px-6 py-2">
-          <p className="text-sm font-semibold">Categories</p>
-          <p className="text-sm text-gray-400">Many choices for you</p>
-        </div>
-        <div className="flex-1 px-6 py-2">
-          <p className="text-sm font-semibold">Where</p>
-          <p className="text-sm text-gray-400">Search destinations</p>
-        </div>
-        <div className="flex flex-1 items-center justify-between px-6 py-2">
-          <div>
-            <p className="text-sm font-semibold">When</p>
-            <p className="text-sm text-gray-400">Add dates</p>
-          </div>
-          <button
-            type="button"
-            aria-label="Search"
-            className="ml-4 flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#E8402C] text-white hover:bg-[#d6371f]"
-          >
-            <Search className="h-5 w-5" />
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
+// function SearchBar() {
+//   return (
+//     <div className="mx-auto max-w-4xl px-6 pt-8">
+//       <div className="flex flex-col items-stretch divide-y divide-gray-200 rounded-3xl border border-gray-200 bg-white p-2 shadow-sm sm:flex-row sm:items-center sm:divide-x sm:divide-y-0">
+//         <div className="flex-1 px-6 py-2">
+//           <p className="text-sm font-semibold">Categories</p>
+//           <p className="text-sm text-gray-400">Many choices for you</p>
+//         </div>
+//         <div className="flex-1 px-6 py-2">
+//           <p className="text-sm font-semibold">Where</p>
+//           <p className="text-sm text-gray-400">Search destinations</p>
+//         </div>
+//         <div className="flex flex-1 items-center justify-between px-6 py-2">
+//           <div>
+//             <p className="text-sm font-semibold">When</p>
+//             <p className="text-sm text-gray-400">Add dates</p>
+//           </div>
+//           <button
+//             type="button"
+//             aria-label="Search"
+//             className="ml-4 flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#E8402C] text-white hover:bg-[#d6371f]"
+//           >
+//             <Search className="h-5 w-5" />
+//           </button>
+//         </div>
+//       </div>
+//     </div>
+//   );
+// }
