@@ -4,7 +4,7 @@ import Image from "next/image";
 
 export default function Footer() {
   return (
-    <footer className="w-full bg-white pt-16 pb-12 border-t border-neutral-100">
+    <footer className="w-full bg-white pt-16 pb-12 border-t border-neutral-100 ">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         
         {/* Main Footer Layout */}

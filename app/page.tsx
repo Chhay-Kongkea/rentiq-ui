@@ -363,7 +363,9 @@ export default function HomePage() {
   return (
     <main className="min-h-screen bg-white">
       <div className="mt-[-25]"><HeroBanner /></div>
+     
       <CategoriesSection />
+    
 
       {/* Featured Rentals Section */}
       <section className="mx-auto w-full max-w-7xl py-10">

@@ -56,28 +56,33 @@ export default function CategoriesSection() {
   }, []);
 
   return (
-    <section className="mt-6 mx-auto w-full max-w-7xl py-6 overflow-hidden">
-      {/* Clean container tracking the layout alignment */}
-      <div className="px-4 sm:px-8">
-        <h2 className="mb-12 text-2xl font-bold tracking-tight text-[#253C95] sm:text-3xl md:text-4xl">
-          Browse By <span className="text-[#FF2B2B]">Categories</span>
-        </h2>
-      </div>
+    <section className="mx-auto w-full max-w-7xl px-4 sm:px-8 py-6">
+      <div className="w-full bg-[#Fcfcfc] py-12 px-6 sm:px-8 relative overflow-hidden rounded-3xl">
+        
+        {/* Section Header with Underline consistent with other sections */}
+        <div className="mb-12 text-center flex flex-col items-center">
+          <h2 className="text-2xl font-bold tracking-tight sm:text-4xl inline-block">
+            <span className="text-[#253C95]">Browse By </span>
+            <span className="text-[#FF2B2B]">Categories</span>
+          </h2>
+          <div className="mt-3 h-1 w-24 bg-[#FF2B2B] rounded-full"></div>
+        </div>
 
-      <div
-        ref={scrollRef}
-        className="flex gap-5 overflow-x-hidden px-4 sm:px-8 whitespace-nowrap"
-        style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-      >
-        {[...categoriesList, ...categoriesList].map((cat, index) => (
-          <div key={`${cat.id}-${index}`} className="w-[140px] flex-shrink-0 sm:w-[160px]">
-            <CategoryCard
-              image={cat.image}
-              title={cat.title}
-              count={cat.count}
-            />
-          </div>
-        ))}
+        <div
+          ref={scrollRef}
+          className="flex gap-5 overflow-x-hidden whitespace-nowrap"
+          style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+        >
+          {[...categoriesList, ...categoriesList].map((cat, index) => (
+            <div key={`${cat.id}-${index}`} className="w-[140px] flex-shrink-0 sm:w-[160px]">
+              <CategoryCard
+                image={cat.image}
+                title={cat.title}
+                count={cat.count}
+              />
+            </div>
+          ))}
+        </div>
       </div>
     </section>
   );
