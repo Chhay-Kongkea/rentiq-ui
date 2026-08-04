@@ -16,14 +16,17 @@ export default function NavbarWrapper({
   const authRoutes = ["/login", "/register", "/forget-password"];
 
   const isAuthPage = authRoutes.includes(pathname);
+  const isAdminPage = pathname.startsWith("/admin");
 
   return (
     <>
-      {!isAuthPage && <Navbar />}
+      {!isAuthPage && !isAdminPage && <Navbar />}
       {isAuthPage ? (
         <main className="flex min-h-screen w-full items-center justify-center p-4 md:p-8">
           {children}
         </main>
+      ) : isAdminPage ? (
+        children
       ) : (
         <main>{children}</main>
       )}
