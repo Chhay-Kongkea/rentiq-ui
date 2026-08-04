@@ -1,5 +1,5 @@
-@tailwind utilities;
 @import "leaflet/dist/leaflet.css";
+@tailwind utilities;
 @layer base {
   * {
     @apply border-border;
@@ -141,4 +141,3 @@
     @apply bg-background text-foreground font-sans antialiased;
   }
 }
-
