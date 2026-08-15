@@ -87,7 +87,7 @@ export default function Navbar() {
             <Link
               href="/deals"
               className={`group flex items-center gap-2 text-base transition-colors ${
-                isActive("/deals")
+                pathname.startsWith("/deals")
                   ? "font-semibold text-neutral-900"
                   : "font-medium text-neutral-400 hover:text-neutral-600"
               }`}
@@ -104,9 +104,9 @@ export default function Navbar() {
 
             {/* Request Link */}
             <Link
-              href="/request"
+              href="/user/requests/myrequests"
               className={`group flex items-center gap-2 text-base transition-colors ${
-                isActive("/request")
+                pathname.startsWith("/item-requests") || pathname.startsWith("/user/requests")
                   ? "font-semibold text-neutral-900"
                   : "font-medium text-neutral-400 hover:text-neutral-600"
               }`}
@@ -171,7 +171,7 @@ export default function Navbar() {
                     <DropdownMenuSeparator className="m-0 bg-gray-100" />
 
                     <DropdownMenuGroup>
-                      <DropdownMenuItem className="cursor-pointer gap-3 rounded-lg px-3 py-2.5 text-gray-700 focus:bg-gray-50 focus:text-gray-900">
+                      <DropdownMenuItem render={<Link href="/register" />} className="cursor-pointer gap-3 rounded-lg px-3 py-2.5 text-gray-700 focus:bg-gray-50 focus:text-gray-900">
                         <Home className="size-4 text-gray-600" />
                         <span>Become a vendor</span>
                       </DropdownMenuItem>
@@ -331,136 +331,77 @@ export default function Navbar() {
         {/* BOTTOM FLOATING SEARCH BAR */}
         <div className="flex justify-center pb-4 pt-1">
           <div className="flex w-full max-w-3xl items-center justify-between rounded-full border border-gray-300 bg-white py-1.5 pl-6 pr-2 shadow-sm transition-shadow hover:shadow-md">
-            
-            {/* 1. Categories Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger
                 render={
-                  <button
-                    type="button"
-                    className="flex flex-1 flex-col items-start text-left cursor-pointer focus:outline-none"
-                  >
-                    <span className="text-xs font-semibold text-neutral-800">
-                      Categories
-                    </span>
-                    <span className="text-xs text-neutral-400">
-                      Many choices for you
-                    </span>
+                  <button type="button" className="flex flex-1 cursor-pointer flex-col items-start text-left focus:outline-none">
+                    <span className="text-xs font-semibold text-neutral-800">Categories</span>
+                    <span className="text-xs text-neutral-400">Many choices for you</span>
                   </button>
                 }
               />
               <DropdownMenuContent align="start" className="w-56 rounded-2xl p-1.5 shadow-xl">
                 <DropdownMenuGroup>
-                  <DropdownMenuLabel className="px-3 py-2 text-xs font-semibold text-gray-400">
-                    Select Category
-                  </DropdownMenuLabel>
+                  <DropdownMenuLabel className="px-3 py-2 text-xs font-semibold text-gray-400">Select Category</DropdownMenuLabel>
                   <DropdownMenuSeparator className="bg-gray-100" />
-                  <DropdownMenuItem className="cursor-pointer gap-3 rounded-lg px-3 py-2 text-gray-700 focus:bg-gray-50">
-                    <LayoutGrid className="size-4 text-red-600" />
-                    <span>All Homes</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem className="cursor-pointer gap-3 rounded-lg px-3 py-2 text-gray-700 focus:bg-gray-50">
-                    <Home className="size-4 text-gray-600" />
-                    <span>Apartments & Condos</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem className="cursor-pointer gap-3 rounded-lg px-3 py-2 text-gray-700 focus:bg-gray-50">
-                    <Store className="size-4 text-gray-600" />
-                    <span>Villas & Houses</span>
-                  </DropdownMenuItem>
+                  <DropdownMenuItem className="cursor-pointer gap-3 rounded-lg px-3 py-2 text-gray-700 focus:bg-gray-50"><LayoutGrid className="size-4 text-red-600" /><span>All Homes</span></DropdownMenuItem>
+                  <DropdownMenuItem className="cursor-pointer gap-3 rounded-lg px-3 py-2 text-gray-700 focus:bg-gray-50"><Home className="size-4 text-gray-600" /><span>Apartments &amp; Condos</span></DropdownMenuItem>
+                  <DropdownMenuItem className="cursor-pointer gap-3 rounded-lg px-3 py-2 text-gray-700 focus:bg-gray-50"><Store className="size-4 text-gray-600" /><span>Villas &amp; Houses</span></DropdownMenuItem>
                 </DropdownMenuGroup>
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {/* Divider */}
             <div className="h-8 w-px bg-gray-300" />
 
-            {/* 2. Where Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger
                 render={
-                  <button
-                    type="button"
-                    className="flex flex-1 flex-col items-start px-6 text-left cursor-pointer focus:outline-none"
-                  >
-                    <span className="text-xs font-semibold text-neutral-800">
-                      Where
-                    </span>
-                    <span className="text-xs text-neutral-400">
-                      Search destinations
-                    </span>
+                  <button type="button" className="flex flex-1 cursor-pointer flex-col items-start px-6 text-left focus:outline-none">
+                    <span className="text-xs font-semibold text-neutral-800">Where</span>
+                    <span className="text-xs text-neutral-400">Search destinations</span>
                   </button>
                 }
               />
               <DropdownMenuContent align="center" className="w-60 rounded-2xl p-1.5 shadow-xl">
                 <DropdownMenuGroup>
-                  <DropdownMenuLabel className="px-3 py-2 text-xs font-semibold text-gray-400">
-                    Popular Locations
-                  </DropdownMenuLabel>
+                  <DropdownMenuLabel className="px-3 py-2 text-xs font-semibold text-gray-400">Popular Locations</DropdownMenuLabel>
                   <DropdownMenuSeparator className="bg-gray-100" />
-                  <DropdownMenuItem className="cursor-pointer gap-3 rounded-lg px-3 py-2 text-gray-700 focus:bg-gray-50">
-                    <MapPin className="size-4 text-red-600" />
-                    <span>Phnom Penh</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem className="cursor-pointer gap-3 rounded-lg px-3 py-2 text-gray-700 focus:bg-gray-50">
-                    <MapPin className="size-4 text-gray-600" />
-                    <span>Siem Reap</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem className="cursor-pointer gap-3 rounded-lg px-3 py-2 text-gray-700 focus:bg-gray-50">
-                    <MapPin className="size-4 text-gray-600" />
-                    <span>Sihanoukville</span>
-                  </DropdownMenuItem>
+                  <DropdownMenuItem className="cursor-pointer gap-3 rounded-lg px-3 py-2 text-gray-700 focus:bg-gray-50"><MapPin className="size-4 text-red-600" /><span>Phnom Penh</span></DropdownMenuItem>
+                  <DropdownMenuItem className="cursor-pointer gap-3 rounded-lg px-3 py-2 text-gray-700 focus:bg-gray-50"><MapPin className="size-4 text-gray-600" /><span>Siem Reap</span></DropdownMenuItem>
+                  <DropdownMenuItem className="cursor-pointer gap-3 rounded-lg px-3 py-2 text-gray-700 focus:bg-gray-50"><MapPin className="size-4 text-gray-600" /><span>Sihanoukville</span></DropdownMenuItem>
                 </DropdownMenuGroup>
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {/* Divider */}
             <div className="h-8 w-px bg-gray-300" />
 
-            {/* 3. When Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger
                 render={
-                  <button
-                    type="button"
-                    className="flex flex-1 flex-col items-start px-6 text-left cursor-pointer focus:outline-none"
-                  >
-                    <span className="text-xs font-semibold text-neutral-800">
-                      When
-                    </span>
+                  <button type="button" className="flex flex-1 cursor-pointer flex-col items-start px-6 text-left focus:outline-none">
+                    <span className="text-xs font-semibold text-neutral-800">When</span>
                     <span className="text-xs text-neutral-400">Add dates</span>
                   </button>
                 }
               />
               <DropdownMenuContent align="end" className="w-56 rounded-2xl p-1.5 shadow-xl">
                 <DropdownMenuGroup>
-                  <DropdownMenuLabel className="px-3 py-2 text-xs font-semibold text-gray-400">
-                    Duration / Timing
-                  </DropdownMenuLabel>
+                  <DropdownMenuLabel className="px-3 py-2 text-xs font-semibold text-gray-400">Duration / Timing</DropdownMenuLabel>
                   <DropdownMenuSeparator className="bg-gray-100" />
-                  <DropdownMenuItem className="cursor-pointer gap-3 rounded-lg px-3 py-2 text-gray-700 focus:bg-gray-50">
-                    <Clock className="size-4 text-red-600" />
-                    <span>Anytime</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem className="cursor-pointer gap-3 rounded-lg px-3 py-2 text-gray-700 focus:bg-gray-50">
-                    <Calendar className="size-4 text-gray-600" />
-                    <span>This Weekend</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem className="cursor-pointer gap-3 rounded-lg px-3 py-2 text-gray-700 focus:bg-gray-50">
-                    <Calendar className="size-4 text-gray-600" />
-                    <span>Next Month</span>
-                  </DropdownMenuItem>
+                  <DropdownMenuItem className="cursor-pointer gap-3 rounded-lg px-3 py-2 text-gray-700 focus:bg-gray-50"><Clock className="size-4 text-red-600" /><span>Anytime</span></DropdownMenuItem>
+                  <DropdownMenuItem className="cursor-pointer gap-3 rounded-lg px-3 py-2 text-gray-700 focus:bg-gray-50"><Calendar className="size-4 text-gray-600" /><span>This Weekend</span></DropdownMenuItem>
+                  <DropdownMenuItem className="cursor-pointer gap-3 rounded-lg px-3 py-2 text-gray-700 focus:bg-gray-50"><Calendar className="size-4 text-gray-600" /><span>Next Month</span></DropdownMenuItem>
                 </DropdownMenuGroup>
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {/* Search Button */}
-            <button
-              type="button"
+            <Link
+              href="/search"
               aria-label="Search"
               className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[#FF2B2B] text-white transition-all hover:bg-red-600 active:scale-95"
             >
               <Search className="size-4 stroke-[2.5]" />
-            </button>
+            </Link>
           </div>
         </div>
       </div>

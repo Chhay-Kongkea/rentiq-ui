@@ -62,10 +62,10 @@ export default function Footer() {
           <div className="lg:col-span-2 flex flex-col items-start text-left">
             <h4 className="text-sm font-bold text-neutral-900 mb-4 tracking-wide">Product</h4>
             <ul className="flex flex-col gap-3 text-sm text-neutral-500">
-              <li><Link href="#" className="hover:text-[#FF2B2B] transition-colors">Categories</Link></li>
-              <li><Link href="#" className="hover:text-[#FF2B2B] transition-colors">Pricing</Link></li>
-              <li><Link href="#" className="hover:text-[#FF2B2B] transition-colors">For Vendors</Link></li>
-              <li><Link href="#" className="hover:text-[#FF2B2B] transition-colors">Features</Link></li>
+              <li><Link href="/categories" className="hover:text-[#FF2B2B] transition-colors">Categories</Link></li>
+              <li><Link href="/items" className="hover:text-[#FF2B2B] transition-colors">Pricing</Link></li>
+              <li><Link href="/register" className="hover:text-[#FF2B2B] transition-colors">For Vendors</Link></li>
+              <li><Link href="/item-requests" className="hover:text-[#FF2B2B] transition-colors">Features</Link></li>
             </ul>
           </div>
 
@@ -95,10 +95,10 @@ export default function Footer() {
           <div className="lg:col-span-2 flex flex-col items-start text-left">
             <h4 className="text-sm font-bold text-neutral-900 mb-4 tracking-wide">Legal</h4>
             <ul className="flex flex-col gap-3 text-sm text-neutral-500">
-              <li><Link href="#" className="hover:text-[#FF2B2B] transition-colors">Privacy Policy</Link></li>
-              <li><Link href="#" className="hover:text-[#FF2B2B] transition-colors">Terms of Service</Link></li>
-              <li><Link href="#" className="hover:text-[#FF2B2B] transition-colors">Cookie Policy</Link></li>
-              <li><Link href="#" className="hover:text-[#FF2B2B] transition-colors">Community Guidelines</Link></li>
+              <li><Link href="/legal/privacy-policy" className="hover:text-[#FF2B2B] transition-colors">Privacy Policy</Link></li>
+              <li><Link href="/legal/terms" className="hover:text-[#FF2B2B] transition-colors">Terms of Service</Link></li>
+              <li><Link href="/legal/privacy-policy" className="hover:text-[#FF2B2B] transition-colors">Cookie Policy</Link></li>
+              <li><Link href="/legal/prohibited-activities" className="hover:text-[#FF2B2B] transition-colors">Community Guidelines</Link></li>
             </ul>
           </div>
 

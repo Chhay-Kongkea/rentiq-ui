@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import Footer from "@/components/footer";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faHouse,
@@ -181,11 +182,14 @@ export default function VendorDashboardLayout({
         </div>
       </aside>
 
-      {/* ---------------- MAIN CONTENT AREA ---------------- */}
-      <main className="flex-1 p-4 pt-20 sm:p-6 lg:ml-64 lg:p-8 lg:pt-8">
-        {children}
-      </main>
+      <div className="flex min-h-screen min-w-0 flex-1 flex-col lg:ml-64">
+        {/* ---------------- MAIN CONTENT AREA ---------------- */}
+        <main className="flex-1 p-4 pt-20 sm:p-6 lg:p-8 lg:pt-8">
+          {children}
+        </main>
 
+        <Footer />
+      </div>
     </div>
   );
 }

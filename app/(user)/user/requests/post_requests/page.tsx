@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { redirect, useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   Home,
@@ -19,6 +20,18 @@ import {
   PlayCircle,
   AlertCircle,
 } from "lucide-react";
+
+const CambodiaMapPicker = dynamic(
+  () => import("@/components/cambodia-map-picker"),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="mt-6 grid h-72 place-items-center rounded-xl bg-[#EEF2FC] text-sm text-gray-500 sm:h-80">
+        Loading Cambodia map...
+      </div>
+    ),
+  },
+);
 
 const CATEGORIES = [
   "Cameras & Drones",
@@ -52,6 +65,10 @@ export default function PostRequestPage() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [location, setLocation] = useState("");
+  const [pickupCoordinates, setPickupCoordinates] = useState<{
+    lat: number;
+    lng: number;
+  } | null>(null);
 
   const [errors, setErrors] = useState<FormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -135,6 +152,7 @@ export default function PostRequestPage() {
         startDate,
         endDate,
         location,
+        pickupCoordinates,
       });
 
       router.push("/user/requests/requests_submit");
@@ -340,7 +358,21 @@ export default function PostRequestPage() {
             </Field>
           </div>
 
-          <MapPreview />
+          <CambodiaMapPicker
+            position={pickupCoordinates}
+            onSelect={(position) => {
+              setPickupCoordinates(position);
+              setLocation(
+                `Pinned location (${position.lat.toFixed(5)}, ${position.lng.toFixed(5)}), Cambodia`,
+              );
+              if (errors.location) {
+                setErrors((previous) => ({
+                  ...previous,
+                  location: undefined,
+                }));
+              }
+            }}
+          />
 
           <div className="mt-8 flex flex-col-reverse items-center justify-between gap-4 border-t border-gray-100 pt-6 sm:flex-row">
             <p className="flex items-center gap-2 text-xs text-gray-500">
@@ -402,21 +434,6 @@ function fieldWrapperClass(hasError: boolean, extra = "") {
     hasError ? "bg-[#FDECEA] ring-1 ring-[#E8402C]" : "bg-[#EEF2FC]",
     extra,
   ].join(" ");
-}
-
-function MapPreview() {
-  return (
-    <div className="relative mt-6 h-56 w-full overflow-hidden rounded-xl bg-[#CFE7EE] sm:h-64">
-      <div className="absolute inset-0 opacity-60 [background-image:linear-gradient(#b9dbe4_1px,transparent_1px),linear-gradient(90deg,#b9dbe4_1px,transparent_1px)] [background-size:28px_28px]" />
-      <div className="absolute inset-y-0 right-1/3 w-10 -skew-x-12 bg-[#9FD3E0]" />
-      <div className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center">
-        <MapPin className="h-8 w-8 fill-[#7C3AED] text-white drop-shadow" />
-        <span className="mt-1 rounded-full bg-white/90 px-2 py-0.5 text-[10px] font-medium text-gray-600 shadow-sm">
-          Drag to set pickup point
-        </span>
-      </div>
-    </div>
-  );
 }
 
 function SiteHeader() {

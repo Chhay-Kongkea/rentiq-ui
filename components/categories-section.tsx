@@ -23,7 +23,7 @@ export default function CategoriesSection() {
     if (!scrollContainer) return;
 
     let animationFrameId: number;
-    let speed = 1;
+    const speed = 1;
 
     const autoScroll = () => {
       if (scrollContainer) {
@@ -79,6 +79,7 @@ export default function CategoriesSection() {
                 image={cat.image}
                 title={cat.title}
                 count={cat.count}
+                href={`/categories/${cat.id}`}
               />
             </div>
           ))}

@@ -21,7 +21,7 @@ export default function ReadyToRentSection() {
           {/* Right Action Buttons */}
           <div className="flex flex-wrap items-center gap-4 w-full lg:w-auto justify-start lg:justify-end">
             <Link
-              href="/rent"
+              href="/items"
               className="flex items-center justify-center gap-2 bg-[#FF2B2B] hover:bg-[#e02424] text-white font-semibold px-8 py-4 rounded-xl shadow-lg shadow-rose-500/20 transition-all duration-300 hover:scale-[1.02]"
             >
               Start Renting
@@ -29,7 +29,7 @@ export default function ReadyToRentSection() {
             </Link>
 
             <Link
-              href="/vendor/register"
+              href="/register"
               className="flex items-center justify-center gap-2 bg-white/80 hover:bg-white text-[#FF2B2B] font-semibold px-8 py-4 rounded-xl border border-rose-200/60 shadow-sm transition-all duration-300 hover:scale-[1.02]"
             >
               Become a Vendor

@@ -1,4 +1,6 @@
-import React from "react";
+"use client";
+
+import React, { useState } from "react";
 import { MapPin, Star, Heart, ShoppingCart } from "lucide-react";
 import Link from "next/link";
 
@@ -23,9 +25,11 @@ export default function RentalCard({
   price,
   period = "day",
 }: RentalCardProps) {
+  const [isFavorite, setIsFavorite] = useState(false);
+
   return (
     <Link 
-      href={`/listings/${id}`} 
+      href={`/listings/${id}`}
       className="block w-full max-w-[280px]"
     >
       <div className="group relative flex flex-col justify-between rounded-2xl bg-white p-4 shadow-xs transition-all hover:shadow-md border border-neutral-100 w-full cursor-pointer">
@@ -36,14 +40,20 @@ export default function RentalCard({
           </span>
           <button 
             type="button" 
-            aria-label="Save to favorites"
+            aria-label={isFavorite ? "Remove from favorites" : "Save to favorites"}
+            aria-pressed={isFavorite}
             onClick={(e) => {
-              e.preventDefault(); // Prevents navigating to detail page when liking
+              e.preventDefault();
               e.stopPropagation();
+              setIsFavorite((favorite) => !favorite);
             }}
-            className="flex size-9 items-center justify-center rounded-full bg-neutral-100 text-neutral-500 transition-colors hover:text-[#FF2B2B]"
+            className={`flex size-9 items-center justify-center rounded-full transition-all active:scale-90 ${
+              isFavorite
+                ? "bg-red-50 text-[#FF2B2B]"
+                : "bg-neutral-100 text-neutral-500 hover:text-[#FF2B2B]"
+            }`}
           >
-            <Heart className="size-5 fill-current" />
+            <Heart className={`size-5 transition-all ${isFavorite ? "fill-current" : "fill-transparent"}`} />
           </button>
         </div>
 
