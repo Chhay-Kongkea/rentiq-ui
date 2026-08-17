@@ -1,89 +1,63 @@
-// components/categories-section.tsx
 "use client";
 
-import React, { useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import CategoryCard from "@/components/category-card";
+import { useGetCategoriesQuery } from "@/redux/services/categoryApi";
+import { useGetItemsQuery } from "@/redux/services/itemApi";
 
-const categoriesList = [
-  { id: 1, image: "/img/electronics.png", title: "Electronics", count: "520+ items" },
-  { id: 2, image: "/img/travel.png", title: "Travel", count: "320+ items" },
-  { id: 3, image: "/img/tools.png", title: "Tools", count: "450+ items" },
-  { id: 4, image: "/img/home.png", title: "Home Stay", count: "180+ stays" },
-  { id: 5, image: "/img/electronics.png", title: "Electronics", count: "520+ items" },
-  { id: 6, image: "/img/sport.png", title: "Sports", count: "250+ items" },
-  { id: 7, image: "/img/camera.png", title: "Camera", count: "220+ items" },
-  { id: 8, image: "/img/room.png", title: "Home Stay", count: "180+ stays" },
-];
+const FALLBACK_ICON = "/img/electronics.png";
 
 export default function CategoriesSection() {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const { data: categories = [], isLoading, isError, refetch } = useGetCategoriesQuery();
+  const { data: items = [] } = useGetItemsQuery();
+  const activeCategories = categories.filter((category) => category.active);
 
   useEffect(() => {
-    const scrollContainer = scrollRef.current;
-    if (!scrollContainer) return;
-
-    let animationFrameId: number;
-    const speed = 1;
-
-    const autoScroll = () => {
-      if (scrollContainer) {
-        scrollContainer.scrollLeft += speed;
-        
-        if (scrollContainer.scrollLeft >= scrollContainer.scrollWidth / 2) {
-          scrollContainer.scrollLeft = 0;
-        }
-      }
-      animationFrameId = requestAnimationFrame(autoScroll);
+    const container = scrollRef.current;
+    if (!container || activeCategories.length < 5) return;
+    let frame = 0;
+    const scroll = () => {
+      container.scrollLeft += 0.6;
+      if (container.scrollLeft >= container.scrollWidth / 2) container.scrollLeft = 0;
+      frame = requestAnimationFrame(scroll);
     };
-
-    animationFrameId = requestAnimationFrame(autoScroll);
-
-    const handleMouseEnter = () => cancelAnimationFrame(animationFrameId);
-    const handleMouseLeave = () => {
-      animationFrameId = requestAnimationFrame(autoScroll);
-    };
-
-    scrollContainer.addEventListener("mouseenter", handleMouseEnter);
-    scrollContainer.addEventListener("mouseleave", handleMouseLeave);
-
+    frame = requestAnimationFrame(scroll);
+    const pause = () => cancelAnimationFrame(frame);
+    const resume = () => { frame = requestAnimationFrame(scroll); };
+    container.addEventListener("mouseenter", pause);
+    container.addEventListener("mouseleave", resume);
     return () => {
-      cancelAnimationFrame(animationFrameId);
-      if (scrollContainer) {
-        scrollContainer.removeEventListener("mouseenter", handleMouseEnter);
-        scrollContainer.removeEventListener("mouseleave", handleMouseLeave);
-      }
+      cancelAnimationFrame(frame);
+      container.removeEventListener("mouseenter", pause);
+      container.removeEventListener("mouseleave", resume);
     };
-  }, []);
+  }, [activeCategories.length]);
+
+  const visibleCategories = activeCategories.length >= 5 ? [...activeCategories, ...activeCategories] : activeCategories;
 
   return (
-    <section className="mx-auto w-full max-w-7xl px-4 sm:px-8 py-6">
-      <div className="w-full bg-[#Fcfcfc] py-12 px-6 sm:px-8 relative overflow-hidden rounded-3xl">
-        
-        {/* Section Header with Underline consistent with other sections */}
-        <div className="mb-12 text-center flex flex-col items-center">
-          <h2 className="text-2xl font-bold tracking-tight sm:text-4xl inline-block">
-            <span className="text-[#253C95]">Browse By </span>
-            <span className="text-[#FF2B2B]">Categories</span>
-          </h2>
-          <div className="mt-3 h-1 w-24 bg-[#FF2B2B] rounded-full"></div>
+    <section className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-8">
+      <div className="relative overflow-hidden rounded-3xl bg-[#fcfcfc] px-6 py-12 sm:px-8">
+        <div className="mb-12 flex flex-col items-center text-center">
+          <h2 className="text-2xl font-bold tracking-tight sm:text-4xl"><span className="text-[#253C95]">Browse By </span><span className="text-[#F73030]">Categories</span></h2>
+          <div className="mt-3 h-1 w-24 rounded-full bg-[#F73030]" />
         </div>
 
-        <div
-          ref={scrollRef}
-          className="flex gap-5 overflow-x-hidden whitespace-nowrap"
-          style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-        >
-          {[...categoriesList, ...categoriesList].map((cat, index) => (
-            <div key={`${cat.id}-${index}`} className="w-[140px] flex-shrink-0 sm:w-[160px]">
-              <CategoryCard
-                image={cat.image}
-                title={cat.title}
-                count={cat.count}
-                href={`/categories/${cat.id}`}
-              />
-            </div>
-          ))}
-        </div>
+        {isLoading ? (
+          <div className="flex gap-5">{Array.from({ length: 5 }, (_, index) => <div key={index} className="h-32 w-[160px] shrink-0 animate-pulse rounded-xl bg-neutral-100" />)}</div>
+        ) : isError ? (
+          <div className="text-center"><p className="text-sm text-red-600">Unable to load categories.</p><button type="button" onClick={() => refetch()} className="mt-3 rounded-xl bg-[#F73030] px-4 py-2 text-xs font-semibold text-white">Try again</button></div>
+        ) : activeCategories.length === 0 ? (
+          <p className="text-center text-sm text-neutral-500">No active categories are available.</p>
+        ) : (
+          <div ref={scrollRef} className="flex justify-start gap-5 overflow-x-auto [scrollbar-width:none]">
+            {visibleCategories.map((category, index) => {
+              const count = items.filter((item) => item.categoryId === category.id).length;
+              return <div key={`${category.id}-${index}`} className="w-[140px] shrink-0 sm:w-[160px]"><CategoryCard image={category.iconUrl || FALLBACK_ICON} title={category.name} count={`${count} ${count === 1 ? "item" : "items"}`} href={`/items?categoryId=${category.id}`} /></div>;
+            })}
+          </div>
+        )}
       </div>
     </section>
   );

@@ -29,7 +29,7 @@ export default function RentalCard({
 
   return (
     <Link 
-      href={`/listings/${id}`}
+      href={`/items/${id}`}
       className="block w-full max-w-[280px]"
     >
       <div className="group relative flex flex-col justify-between rounded-2xl bg-white p-4 shadow-xs transition-all hover:shadow-md border border-neutral-100 w-full cursor-pointer">

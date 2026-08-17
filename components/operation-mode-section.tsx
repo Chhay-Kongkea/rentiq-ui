@@ -33,18 +33,47 @@ export default function OperationModeSection() {
         <div className="absolute inset-0 pointer-events-none hidden lg:flex justify-center overflow-hidden">
           <div className="w-full max-w-7xl relative h-full">
             <svg
-              className="absolute inset-0 w-full h-full text-red-400"
+              className="absolute inset-0 h-full w-full"
               fill="none"
               viewBox="0 0 1200 860"
               preserveAspectRatio="none"
+              aria-hidden="true"
             >
+              <defs>
+                <linearGradient id="operation-line-gradient" x1="250" y1="190" x2="900" y2="690" gradientUnits="userSpaceOnUse">
+                  <stop stopColor="#F73030" stopOpacity="0.25" />
+                  <stop offset="0.5" stopColor="#F73030" />
+                  <stop offset="1" stopColor="#FF6B6B" stopOpacity="0.45" />
+                </linearGradient>
+                <filter id="operation-line-glow" x="-20%" y="-20%" width="140%" height="140%">
+                  <feGaussianBlur stdDeviation="3" result="blur" />
+                  <feMerge>
+                    <feMergeNode in="blur" />
+                    <feMergeNode in="SourceGraphic" />
+                  </feMerge>
+                </filter>
+              </defs>
+
               <path
-                d="M 850 200 C 650 200, 550 330, 350 330 C 150 330, 250 550, 450 550 C 650 550, 650 680, 850 680"
-                stroke="#FF4D4D"
-                strokeWidth="2.5"
-                strokeDasharray="6 6"
+                d="M 860 190 C 690 190 700 325 465 325 S 245 535 470 535 S 650 690 860 690"
+                stroke="#F73030"
+                strokeOpacity="0.08"
+                strokeWidth="10"
                 strokeLinecap="round"
+                vectorEffect="non-scaling-stroke"
               />
+              <path
+                d="M 860 190 C 690 190 700 325 465 325 S 245 535 470 535 S 650 690 860 690"
+                stroke="url(#operation-line-gradient)"
+                strokeWidth="3"
+                strokeDasharray="12 12"
+                strokeLinecap="round"
+                vectorEffect="non-scaling-stroke"
+                filter="url(#operation-line-glow)"
+                className="operation-path"
+              />
+
+
             </svg>
           </div>
         </div>
@@ -66,14 +95,15 @@ export default function OperationModeSection() {
               return (
                 <div
                   key={index}
-                  className={`flex flex-col lg:flex-row items-center justify-between gap-12 lg:gap-24 ${
+                  style={{ animationDelay: `${index * 180}ms` }}
+                  className={`operation-step flex flex-col lg:flex-row items-center justify-between gap-12 lg:gap-24 ${
                     isEven ? "lg:flex-row-reverse" : ""
                   }`}
                 >
                   {/* Text Content */}
                   <div className="flex-1 max-w-xl flex flex-col items-start text-left z-10 bg-[#Fcfcfc]/80 backdrop-blur-[2px] py-4">
                     <div className="flex items-center gap-4 mb-4">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#FF2B2B] text-white font-bold text-lg shadow-sm">
+                      <div className="operation-step-number flex h-10 w-10 items-center justify-center rounded-full bg-[#FF2B2B] text-white font-bold text-lg shadow-sm">
                         {item.step}
                       </div>
                       <h3 className="text-2xl font-bold text-[#FF2B2B]">
@@ -87,12 +117,13 @@ export default function OperationModeSection() {
 
                   {/* Illustration Card */}
                   <div className="flex-1 flex justify-center w-full z-10">
-                    <div className="relative w-full max-w-md h-[300px] sm:h-[350px] bg-white rounded-3xl p-6 shadow-sm border border-neutral-100 flex items-center justify-center overflow-hidden group">
+                    <div style={{ animationDelay: `${index * 350}ms` }}
+                      className="operation-illustration relative flex h-[300px] w-full max-w-md items-center justify-center overflow-hidden bg-transparent sm:h-[350px]">
                       <Image
                         src={item.image}
                         alt={item.title}
                         fill
-                        className="object-cover rounded-2xl transition-transform duration-500 group-hover:scale-105"
+                        className="object-contain transition-transform duration-500 hover:scale-105"
                       />
                     </div>
                   </div>

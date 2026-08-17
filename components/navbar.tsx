@@ -2,14 +2,19 @@
 "use client";
 
 import React, { useState } from "react";
+import { useFormStatus } from "react-dom";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useTheme } from "next-themes";
+import { useSession } from "next-auth/react";
+import { logout } from "@/app/actions/auth";
+import { loginWithKeycloak } from "@/app/(auth)/login/actions";
+import { useGetCategoriesQuery } from "@/redux/services/categoryApi";
 
 // Lucide Icons
 import {
   Search,
   Globe,
-  Menu,
   Home,
   HelpCircle,
   Moon,
@@ -21,9 +26,9 @@ import {
   Bell,
   CheckCircle2,
   MenuIcon,
-  MapPin,
   Clock,
   LayoutGrid,
+  MapPin,
 } from "lucide-react";
 
 // Shadcn UI Components
@@ -38,15 +43,67 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Switch } from "@/components/ui/switch";
 
-export default function Navbar() {
-  const pathname = usePathname();
-  const [darkMode, setDarkMode] = useState(false);
 
-  // Toggle this to switch between Logged In / Logged Out states
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+const CAMBODIA_PROVINCES = [
+  "Banteay Meanchey", "Battambang", "Kampong Cham", "Kampong Chhnang",
+  "Kampong Speu", "Kampong Thom", "Kampot", "Kandal", "Kep", "Koh Kong",
+  "Kratie", "Mondulkiri", "Oddar Meanchey", "Pailin", "Phnom Penh",
+  "Preah Sihanouk", "Preah Vihear", "Prey Veng", "Pursat", "Ratanakiri",
+  "Siem Reap", "Stung Treng", "Svay Rieng", "Takeo", "Tboung Khmum",
+] as const;
+function getInitials(name?: string | null, email?: string | null): string {
+  const words = name?.trim().split(/\s+/).filter(Boolean) ?? [];
+  if (words.length >= 2) {
+    return `${words[0][0]}${words[words.length - 1][0]}`.toUpperCase();
+  }
+  if (words.length === 1 && words[0].length >= 2) {
+    return words[0].slice(0, 2).toUpperCase();
+  }
+
+  const emailName = email?.split("@")[0].replace(/[^a-zA-Z0-9]/g, "") ?? "";
+  return (emailName.slice(0, 2) || "US").toUpperCase();
+}
+
+function KeycloakLoginButton() {
+  const { pending } = useFormStatus();
+
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      className="py-1.5 text-left transition-colors hover:text-red-600 disabled:cursor-wait disabled:text-gray-400"
+    >
+      {pending ? "Redirecting..." : "Log in"}
+    </button>
+  );
+}
+export default function Navbar() {
+const pathname = usePathname();
+  const router = useRouter();
+  const { theme, setTheme } = useTheme();
+  const darkMode = theme === "dark";
+  const [selectedProvince, setSelectedProvince] = useState("All provinces");
+  const [selectedCategoryId, setSelectedCategoryId] = useState("");
+  const [selectedCategoryName, setSelectedCategoryName] = useState("All categories");
+  const [selectedTiming, setSelectedTiming] = useState("Anytime");
+  const { data: searchCategories = [] } = useGetCategoriesQuery();
+  const { data: session, status } = useSession();
+  const isLoggedIn = status === "authenticated";
+  const displayName = session?.user?.name ?? session?.user?.email ?? "User";
+  const initials = getInitials(session?.user?.name, session?.user?.email);
 
   // Helper to check active tab based on current route
   const isActive = (path: string) => pathname === path;
+
+  function handleSearch(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const params = new URLSearchParams();
+    if (selectedProvince !== "All provinces") params.set("location", selectedProvince);
+    if (selectedCategoryId) params.set("categoryId", selectedCategoryId);
+    if (selectedTiming !== "Anytime") params.set("when", selectedTiming);
+    const queryString = params.toString();
+    router.push(queryString ? `/items?${queryString}` : "/items");
+  }
 
   return (
     <header className="pt-8 w-full border-b border-gray-100 bg-white px-4 py-3 md:px-8 ml-5 mr-">
@@ -73,11 +130,11 @@ export default function Navbar() {
                   : "font-medium text-neutral-400 hover:text-neutral-600"
               }`}
             >
-              <div className="relative flex size-7 items-center justify-center">
+              <div className="relative flex size-12 items-center justify-center">
                 <img
                   src="/img/image 3.png"
                   alt="Homes"
-                  className="size-6 object-contain"
+                  className="size-10 object-contain"
                 />
               </div>
               <span>Homes</span>
@@ -92,11 +149,11 @@ export default function Navbar() {
                   : "font-medium text-neutral-400 hover:text-neutral-600"
               }`}
             >
-              <div className="relative flex size-7 items-center justify-center">
+              <div className="relative flex size-12 items-center justify-center">
                 <img
                   src="/img/image 2.png"
                   alt="Deals"
-                  className="size-6 object-contain"
+                  className="size-10 object-contain"
                 />
               </div>
               <span>Deals</span>
@@ -111,11 +168,11 @@ export default function Navbar() {
                   : "font-medium text-neutral-400 hover:text-neutral-600"
               }`}
             >
-              <div className="relative flex size-7 items-center justify-center">
+              <div className="relative flex size-12 items-center justify-center">
                 <img
                   src="/img/image 4.png"
                   alt="Request"
-                  className="size-6 object-contain"
+                  className="size-10 object-contain"
                 />
               </div>
               <span>Request</span>
@@ -124,13 +181,16 @@ export default function Navbar() {
 
           {/* Right Action Icons */}
           <div className="flex items-center gap-3">
-            <button
-              type="button"
-              aria-label="Language Selector"
-              className="flex size-9 items-center justify-center rounded-full bg-gray-200 text-gray-700 transition-colors hover:bg-gray-300"
-            >
-              <Globe className="size-4" />
-            </button>
+            {isLoggedIn ? (
+              <Link
+                href="/user/profile"
+                aria-label={`Open ${displayName} profile`}
+                title={displayName}
+                className="flex size-9 items-center justify-center rounded-full bg-rose-100 text-xs font-bold uppercase text-red-900 transition-colors hover:bg-rose-200"
+              >
+                {initials}
+              </Link>
+            ) : null}
 
             {/* Hamburger Dropdown Menu Integration */}
             <DropdownMenu>
@@ -154,12 +214,9 @@ export default function Navbar() {
                   /* ---------------- LOGGED OUT VERSION ---------------- */
                   <div className="text-sm text-gray-800">
                     <div className="flex flex-col px-4 py-3 font-semibold">
-                      <Link
-                        href="/login"
-                        className="py-1.5 transition-colors hover:text-red-600"
-                      >
-                        Log in
-                      </Link>
+                      <form action={loginWithKeycloak}>
+                        <KeycloakLoginButton />
+                      </form>
                       <Link
                         href="/register"
                         className="py-1.5 font-normal text-gray-700 transition-colors hover:text-red-600"
@@ -205,7 +262,7 @@ export default function Navbar() {
                         </div>
                         <Switch
                           checked={darkMode}
-                          onCheckedChange={setDarkMode}
+                          onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")}
                           className="data-[state=checked]:bg-red-600"
                         />
                       </div>
@@ -224,15 +281,16 @@ export default function Navbar() {
                 ) : (
                   /* ---------------- LOGGED IN VERSION ---------------- */
                   <div className="text-sm text-gray-800">
-                    <DropdownMenuLabel className="m-0 p-4 font-normal">
+                    <DropdownMenuGroup>
+                      <DropdownMenuLabel className="m-0 p-4 font-normal">
                       <div className="flex items-center gap-3">
                         <div className="flex size-11 items-center justify-center rounded-full bg-rose-100 font-semibold text-red-900">
-                          ST
+                          {initials}
                         </div>
                         <div className="flex flex-col">
                           <div className="flex items-center gap-1">
                             <span className="font-bold text-gray-900">
-                              Saroth Tola
+                              {displayName}
                             </span>
                             <CheckCircle2 className="size-4 fill-red-600 text-white" />
                           </div>
@@ -245,12 +303,13 @@ export default function Navbar() {
                           </div>
                         </div>
                       </div>
-                    </DropdownMenuLabel>
+                      </DropdownMenuLabel>
+                    </DropdownMenuGroup>
 
                     <DropdownMenuSeparator className="m-0 bg-gray-100" />
 
                     <DropdownMenuGroup>
-                      <DropdownMenuItem className="cursor-pointer gap-3 rounded-lg px-3 py-2.5 font-semibold text-gray-900 focus:bg-gray-50">
+                      <DropdownMenuItem onClick={() => router.push("/user/become-vendor")} className="cursor-pointer gap-3 rounded-lg px-3 py-2.5 font-semibold text-gray-900 focus:bg-gray-50">
                         <Store className="size-4 text-red-600" />
                         <span>Become a Vendor</span>
                       </DropdownMenuItem>
@@ -269,7 +328,7 @@ export default function Navbar() {
                         </span>
                       </DropdownMenuItem>
 
-                      <DropdownMenuItem className="cursor-pointer gap-3 rounded-lg px-3 py-2.5 text-gray-700 focus:bg-gray-50">
+                      <DropdownMenuItem onClick={() => router.push("/user/favorites")} className="cursor-pointer gap-3 rounded-lg px-3 py-2.5 text-gray-700 focus:bg-gray-50">
                         <Heart className="size-4 text-gray-600" />
                         <span>Saved Wishlist</span>
                       </DropdownMenuItem>
@@ -300,7 +359,7 @@ export default function Navbar() {
                         </div>
                         <Switch
                           checked={darkMode}
-                          onCheckedChange={setDarkMode}
+                          onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")}
                           className="data-[state=checked]:bg-red-600"
                         />
                       </div>
@@ -314,12 +373,14 @@ export default function Navbar() {
                     <DropdownMenuSeparator className="m-0 bg-gray-100" />
 
                     <DropdownMenuGroup>
-                      <DropdownMenuItem
-                        onClick={() => setIsLoggedIn(false)}
-                        className="cursor-pointer rounded-lg px-3 py-2 font-semibold text-red-600 focus:bg-red-50 focus:text-red-600"
-                      >
-                        Log out
-                      </DropdownMenuItem>
+                      <form action={logout}>
+                        <button
+                          type="submit"
+                          className="w-full cursor-pointer rounded-lg px-3 py-2 text-left font-semibold text-red-600 hover:bg-red-50"
+                        >
+                          Log out
+                        </button>
+                      </form>
                     </DropdownMenuGroup>
                   </div>
                 )}
@@ -329,82 +390,55 @@ export default function Navbar() {
         </div>
 
         {/* BOTTOM FLOATING SEARCH BAR */}
-        <div className="flex justify-center pb-4 pt-1">
-          <div className="flex w-full max-w-3xl items-center justify-between rounded-full border border-gray-300 bg-white py-1.5 pl-6 pr-2 shadow-sm transition-shadow hover:shadow-md">
+        <div className={`${pathname.startsWith("/user/profile") || pathname.startsWith("/user/become-vendor") ? "hidden" : "flex"} justify-center pb-4 pt-1`}>
+          <form onSubmit={handleSearch} className="flex w-full max-w-3xl items-center justify-between rounded-full border border-gray-300 bg-white py-1.5 pl-6 pr-2 shadow-sm transition-shadow hover:shadow-md focus-within:border-[#253C95]/40 focus-within:shadow-md">
             <DropdownMenu>
-              <DropdownMenuTrigger
-                render={
-                  <button type="button" className="flex flex-1 cursor-pointer flex-col items-start text-left focus:outline-none">
-                    <span className="text-xs font-semibold text-neutral-800">Categories</span>
-                    <span className="text-xs text-neutral-400">Many choices for you</span>
-                  </button>
-                }
-              />
-              <DropdownMenuContent align="start" className="w-56 rounded-2xl p-1.5 shadow-xl">
+              <DropdownMenuTrigger render={<button type="button" className="flex min-w-0 flex-1 cursor-pointer flex-col items-start text-left focus:outline-none"><span className="text-xs font-semibold text-neutral-800">Categories</span><span className="max-w-36 truncate text-xs text-neutral-400">{selectedCategoryName}</span></button>} />
+              <DropdownMenuContent align="start" className="w-60 rounded-2xl p-1.5 shadow-xl">
                 <DropdownMenuGroup>
                   <DropdownMenuLabel className="px-3 py-2 text-xs font-semibold text-gray-400">Select Category</DropdownMenuLabel>
                   <DropdownMenuSeparator className="bg-gray-100" />
-                  <DropdownMenuItem className="cursor-pointer gap-3 rounded-lg px-3 py-2 text-gray-700 focus:bg-gray-50"><LayoutGrid className="size-4 text-red-600" /><span>All Homes</span></DropdownMenuItem>
-                  <DropdownMenuItem className="cursor-pointer gap-3 rounded-lg px-3 py-2 text-gray-700 focus:bg-gray-50"><Home className="size-4 text-gray-600" /><span>Apartments &amp; Condos</span></DropdownMenuItem>
-                  <DropdownMenuItem className="cursor-pointer gap-3 rounded-lg px-3 py-2 text-gray-700 focus:bg-gray-50"><Store className="size-4 text-gray-600" /><span>Villas &amp; Houses</span></DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => { setSelectedCategoryId(""); setSelectedCategoryName("All categories"); }} className="cursor-pointer gap-3 rounded-lg px-3 py-2 text-gray-700 focus:bg-gray-50"><LayoutGrid className="size-4 text-[#F73030]" /><span>All categories</span></DropdownMenuItem>
+                  {searchCategories.filter((category) => category.active).map((category) => (
+                    <DropdownMenuItem key={category.id} onClick={() => { setSelectedCategoryId(String(category.id)); setSelectedCategoryName(category.name); }} className="cursor-pointer gap-3 rounded-lg px-3 py-2 text-gray-700 focus:bg-gray-50"><Store className="size-4 text-gray-600" /><span>{category.name}</span></DropdownMenuItem>
+                  ))}
                 </DropdownMenuGroup>
               </DropdownMenuContent>
             </DropdownMenu>
-
-            <div className="h-8 w-px bg-gray-300" />
-
+            <div className="mx-4 h-8 w-px bg-gray-300" />
             <DropdownMenu>
-              <DropdownMenuTrigger
-                render={
-                  <button type="button" className="flex flex-1 cursor-pointer flex-col items-start px-6 text-left focus:outline-none">
-                    <span className="text-xs font-semibold text-neutral-800">Where</span>
-                    <span className="text-xs text-neutral-400">Search destinations</span>
-                  </button>
-                }
-              />
-              <DropdownMenuContent align="center" className="w-60 rounded-2xl p-1.5 shadow-xl">
+              <DropdownMenuTrigger render={<button type="button" className="flex min-w-0 flex-[1.5] cursor-pointer flex-col items-start text-left focus:outline-none"><span className="text-xs font-semibold text-neutral-800">Where</span><span className="max-w-44 truncate text-xs text-neutral-400">{selectedProvince}</span></button>} />
+              <DropdownMenuContent align="center" className="max-h-80 w-60 overflow-y-auto rounded-2xl p-1.5 shadow-xl">
                 <DropdownMenuGroup>
-                  <DropdownMenuLabel className="px-3 py-2 text-xs font-semibold text-gray-400">Popular Locations</DropdownMenuLabel>
+                  <DropdownMenuLabel className="px-3 py-2 text-xs font-semibold text-gray-400">Select Province</DropdownMenuLabel>
                   <DropdownMenuSeparator className="bg-gray-100" />
-                  <DropdownMenuItem className="cursor-pointer gap-3 rounded-lg px-3 py-2 text-gray-700 focus:bg-gray-50"><MapPin className="size-4 text-red-600" /><span>Phnom Penh</span></DropdownMenuItem>
-                  <DropdownMenuItem className="cursor-pointer gap-3 rounded-lg px-3 py-2 text-gray-700 focus:bg-gray-50"><MapPin className="size-4 text-gray-600" /><span>Siem Reap</span></DropdownMenuItem>
-                  <DropdownMenuItem className="cursor-pointer gap-3 rounded-lg px-3 py-2 text-gray-700 focus:bg-gray-50"><MapPin className="size-4 text-gray-600" /><span>Sihanoukville</span></DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setSelectedProvince("All provinces")} className="cursor-pointer gap-3 rounded-lg px-3 py-2 text-gray-700 focus:bg-gray-50"><MapPin className="size-4 text-[#F73030]" /><span>All provinces</span></DropdownMenuItem>
+                  {CAMBODIA_PROVINCES.map((province) => (
+                    <DropdownMenuItem key={province} onClick={() => setSelectedProvince(province)} className="cursor-pointer gap-3 rounded-lg px-3 py-2 text-gray-700 focus:bg-gray-50"><MapPin className="size-4 text-gray-500" /><span>{province}</span></DropdownMenuItem>
+                  ))}
                 </DropdownMenuGroup>
               </DropdownMenuContent>
             </DropdownMenu>
-
-            <div className="h-8 w-px bg-gray-300" />
-
+            <div className="mx-4 h-8 w-px bg-gray-300" />
             <DropdownMenu>
-              <DropdownMenuTrigger
-                render={
-                  <button type="button" className="flex flex-1 cursor-pointer flex-col items-start px-6 text-left focus:outline-none">
-                    <span className="text-xs font-semibold text-neutral-800">When</span>
-                    <span className="text-xs text-neutral-400">Add dates</span>
-                  </button>
-                }
-              />
+              <DropdownMenuTrigger render={<button type="button" className="flex min-w-0 flex-1 cursor-pointer flex-col items-start text-left focus:outline-none"><span className="text-xs font-semibold text-neutral-800">When</span><span className="text-xs text-neutral-400">{selectedTiming}</span></button>} />
               <DropdownMenuContent align="end" className="w-56 rounded-2xl p-1.5 shadow-xl">
                 <DropdownMenuGroup>
                   <DropdownMenuLabel className="px-3 py-2 text-xs font-semibold text-gray-400">Duration / Timing</DropdownMenuLabel>
                   <DropdownMenuSeparator className="bg-gray-100" />
-                  <DropdownMenuItem className="cursor-pointer gap-3 rounded-lg px-3 py-2 text-gray-700 focus:bg-gray-50"><Clock className="size-4 text-red-600" /><span>Anytime</span></DropdownMenuItem>
-                  <DropdownMenuItem className="cursor-pointer gap-3 rounded-lg px-3 py-2 text-gray-700 focus:bg-gray-50"><Calendar className="size-4 text-gray-600" /><span>This Weekend</span></DropdownMenuItem>
-                  <DropdownMenuItem className="cursor-pointer gap-3 rounded-lg px-3 py-2 text-gray-700 focus:bg-gray-50"><Calendar className="size-4 text-gray-600" /><span>Next Month</span></DropdownMenuItem>
+                  {["Anytime", "This Weekend", "Next Month"].map((timing, index) => (
+                    <DropdownMenuItem key={timing} onClick={() => setSelectedTiming(timing)} className="cursor-pointer gap-3 rounded-lg px-3 py-2 text-gray-700 focus:bg-gray-50">{index === 0 ? <Clock className="size-4 text-[#F73030]" /> : <Calendar className="size-4 text-gray-600" />}<span>{timing}</span></DropdownMenuItem>
+                  ))}
                 </DropdownMenuGroup>
               </DropdownMenuContent>
             </DropdownMenu>
-
-            <Link
-              href="/search"
-              aria-label="Search"
-              className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[#FF2B2B] text-white transition-all hover:bg-red-600 active:scale-95"
-            >
-              <Search className="size-4 stroke-[2.5]" />
-            </Link>
-          </div>
+            <button type="submit" aria-label="Search" className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[#F73030] text-white transition-all hover:bg-[#de2b2b] active:scale-95"><Search className="size-4 stroke-[2.5]" /></button>
+          </form>
         </div>
       </div>
     </header>
   );
 }
+
+
+

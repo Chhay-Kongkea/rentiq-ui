@@ -2,10 +2,11 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { Eye, EyeOff, ImagePlus } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import * as z from "zod";
 
 import { Button } from "@/components/ui/button";
@@ -26,44 +27,18 @@ import {
   InputGroupInput,
 } from "@/components/ui/input-group";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { useRegisterMutation } from "@/redux/services/authApi";
 
-const ACCENT = "#FF3333";
-
-const COUNTRY_CODES = [
-  { code: "+855", label: "KH" },
-  { code: "+66", label: "TH" },
-  { code: "+84", label: "VN" },
-  { code: "+1", label: "US" },
-];
-
-const MAX_FILE_SIZE = 5 * 1024 * 1024;
-const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/png"];
-
-const idPhotoSchema = z
-  .instanceof(File, { message: "Photo required" })
-  .refine((file) => file.size <= MAX_FILE_SIZE, "Max size 5MB")
-  .refine(
-    (file) => ACCEPTED_IMAGE_TYPES.includes(file.type),
-    "JPG or PNG only",
-  );
+const ACCENT = "#F73030";
 
 const formSchema = z
   .object({
-    fullName: z.string().min(3, "Full name required"),
+    firstName: z.string().min(1, "First name required"),
+    lastName: z.string().min(1, "Last name required"),
+    username: z.string().min(3, "Username must be at least 3 characters"),
     email: z.string().email("Invalid email"),
-    countryCode: z.string(),
-    phoneNumber: z.string().min(6, "Phone required"),
     password: z.string().min(8, "Min 8 characters"),
     confirmPassword: z.string().min(1, "Confirm password"),
-    frontPhoto: idPhotoSchema,
-    backPhoto: idPhotoSchema,
     agreeTerms: z.boolean().refine((val) => val === true, {
       message: "Required",
     }),
@@ -88,54 +63,9 @@ function AbsoluteError({ message }: { message?: string }) {
   );
 }
 
-function FileDropField({
-  label,
-  file,
-  onChange,
-  error,
-}: {
-  label: string;
-  file: File | undefined;
-  onChange: (file: File | undefined) => void;
-  error?: string;
-}) {
-  const inputRef = React.useRef<HTMLInputElement>(null);
-
-  return (
-    <div className="relative flex-1">
-      <button
-        type="button"
-        onClick={() => inputRef.current?.click()}
-        className={`flex w-full items-center justify-center gap-2 rounded-xl border border-dashed px-3 py-2 transition-all ${
-          error
-            ? "border-red-500 bg-red-50/30"
-            : file
-              ? "border-red-400 bg-red-50/20"
-              : "border-neutral-300 bg-neutral-50/50 hover:bg-neutral-100/50"
-        }`}
-      >
-        <input
-          ref={inputRef}
-          type="file"
-          accept="image/jpeg,image/png"
-          hidden
-          onChange={(e) => onChange(e.target.files?.[0])}
-        />
-        <ImagePlus
-          size={16}
-          className={file ? "text-[#FF3333]" : "text-neutral-400"}
-          aria-hidden="true"
-        />
-        <span className="truncate text-xs font-medium text-neutral-600">
-          {file ? file.name : label}
-        </span>
-      </button>
-      <AbsoluteError message={error} />
-    </div>
-  );
-}
-
 export default function RegisterForm() {
+  const router = useRouter();
+  const [register, { isLoading }] = useRegisterMutation();
   const [showPassword, setShowPassword] = React.useState(false);
   const [showConfirm, setShowConfirm] = React.useState(false);
 
@@ -143,64 +73,90 @@ export default function RegisterForm() {
     resolver: zodResolver(formSchema),
     shouldFocusError: false,
     defaultValues: {
-      fullName: "",
+      firstName: "",
+      lastName: "",
+      username: "",
       email: "",
-      countryCode: "+855",
-      phoneNumber: "",
       password: "",
       confirmPassword: "",
-      frontPhoto: undefined,
-      backPhoto: undefined,
       agreeTerms: false,
       agreePrivacy: false,
     },
   });
 
-  function onSubmit(data: SignupFormValues) {
-    toast("Account created", {
-      description: `Welcome to Rentiq, ${data.fullName}.`,
-      position: "bottom-right",
-    });
-    form.reset();
+  async function onSubmit(data: SignupFormValues) {
+    try {
+      await register({
+        username: data.username,
+        email: data.email,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        password: data.password,
+        confirmPassword: data.confirmPassword,
+      }).unwrap();
+
+      toast.success("Account created", {
+        description: "Continue to Keycloak to sign in.",
+        position: "bottom-right",
+      });
+      router.push("/login");
+    } catch (error) {
+      const apiError =
+        typeof error === "object" && error !== null && "data" in error
+          ? error.data
+          : undefined;
+      const message =
+        typeof apiError === "object" &&
+        apiError !== null &&
+        "message" in apiError &&
+        typeof apiError.message === "string"
+          ? apiError.message
+          : "Registration failed. Please check your details and try again.";
+
+      toast.error("Could not create account", {
+        description: message,
+        position: "bottom-right",
+      });
+    }
   }
 
   return (
-    <Card className="mx-auto grid max-h-[95vh] w-full max-w-4xl overflow-hidden rounded-3xl border-0 p-0 shadow-2xl md:grid-cols-2">
+    <Card className="mx-auto grid w-full max-w-5xl overflow-hidden rounded-[28px] border border-neutral-100 p-0 shadow-[0_24px_80px_rgba(15,23,42,0.14)] md:min-h-[720px] md:grid-cols-[46%_54%]">
       {/* LEFT: Hero Image Panel */}
       <div
-        className="relative hidden h-full w-full bg-cover bg-center p-6 md:flex md:flex-col md:justify-end"
+        className="relative hidden h-full w-full bg-cover bg-center p-8 md:flex md:flex-col md:justify-end lg:p-10"
         style={{
           backgroundImage: "url('/img/image-for-register.png')",
         }}
       >
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-black/5" />
 
-        <div className="relative z-10 rounded-2xl border border-white/20 bg-black/40 p-4 backdrop-blur-md">
-          <h2 className="mb-1 text-xl font-bold leading-snug text-white">
+        <div className="relative z-10 rounded-[20px] border border-white/20 bg-black/35 p-6 backdrop-blur-md">
+          <h2 className="mb-2 text-3xl font-bold leading-tight text-white">
             Start your rental journey today.
           </h2>
-          <p className="mb-3 text-[11px] leading-relaxed text-white/80">
+          <p className="mb-5 max-w-sm text-sm leading-6 text-white/80">
             Join thousands of verified users in a marketplace built on trust.
           </p>
           <div className="flex items-center gap-2">
             <div className="flex -space-x-1.5">
               <img
-                className="inline-block size-6 rounded-full ring-2 ring-white"
+                className="inline-block size-8 rounded-full ring-2 ring-white"
                 src="/img/samsreynich.jpg"
                 alt="User 1"
               />
               <img
-                className="inline-block size-6 rounded-full ring-2 ring-white"
+                className="inline-block size-8 rounded-full ring-2 ring-white"
                 src="/img/cholna.png"
                 alt="User 2"
               />
               <img
-                className="inline-block size-6 rounded-full ring-2 ring-white"
+                className="inline-block size-8 rounded-full ring-2 ring-white"
                 src="/img/chanthat.png"
                 alt="User 3"
               />
             </div>
-            <span className="text-[11px] font-medium text-white/90">
+            <span className="text-xs font-medium text-white/90">
               4.9/5 Rating from 10k+ users
             </span>
           </div>
@@ -208,12 +164,13 @@ export default function RegisterForm() {
       </div>
 
       {/* RIGHT: Form Panel */}
-      <div className="flex flex-col justify-between bg-white p-5 md:p-6 overflow-hidden">
-        <CardHeader className="p-0 pb-1 space-y-0.5">
-          <CardTitle className="text-xl font-bold tracking-tight text-neutral-900">
-            Create your account
+      <div className="flex flex-col bg-white p-6 sm:p-8 lg:p-10">
+        <CardHeader className="space-y-2 p-0 pb-7">
+          <CardTitle className="text-3xl font-bold tracking-tight text-[#253C95]">
+            <span className="text-[#253C95]">Create your </span>
+            <span className="text-[#F73030]">account</span>
           </CardTitle>
-          <CardDescription className="text-[11px] text-neutral-500">
+          <CardDescription className="text-sm leading-6 text-neutral-500">
             Fill in your details to get started with Rentiq.
           </CardDescription>
         </CardHeader>
@@ -223,28 +180,89 @@ export default function RegisterForm() {
             id="signup-form"
             onSubmit={form.handleSubmit(onSubmit)}
             noValidate
-            className="space-y-4"
+            className="space-y-6"
           >
-            {/* FULL NAME & EMAIL ROW */}
-            <div className="grid grid-cols-2 gap-2.5">
+            {/* NAME ROW */}
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
               <Controller
-                name="fullName"
+                name="firstName"
                 control={form.control}
                 render={({ field, fieldState }) => (
                   <Field className="relative border-none p-0">
                     <FieldLabel
-                      htmlFor="signup-form-fullname"
-                      className="text-[11px] font-semibold text-neutral-700 mb-1"
+                      htmlFor="signup-form-first-name"
+                      className="mb-2 text-xs font-semibold text-neutral-700"
                     >
-                      Full Name
+                      First Name
                     </FieldLabel>
                     <Input
                       {...field}
-                      id="signup-form-fullname"
+                      id="signup-form-first-name"
                       aria-invalid={fieldState.invalid}
-                      placeholder="John Doe"
-                      autoComplete="name"
-                      className="h-9 rounded-xl border-neutral-200 text-xs focus-visible:ring-1 focus-visible:ring-neutral-400"
+                      placeholder="John"
+                      autoComplete="given-name"
+                      className="h-11 rounded-xl border-neutral-200 bg-[#fafafa] px-4 text-sm focus-visible:ring-1 focus-visible:ring-neutral-400"
+                      style={
+                        fieldState.invalid
+                          ? { borderColor: ACCENT }
+                          : undefined
+                      }
+                    />
+                    <AbsoluteError message={fieldState.error?.message} />
+                  </Field>
+                )}
+              />
+
+              <Controller
+                name="lastName"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <Field className="relative border-none p-0">
+                    <FieldLabel
+                      htmlFor="signup-form-last-name"
+                      className="mb-2 text-xs font-semibold text-neutral-700"
+                    >
+                      Last Name
+                    </FieldLabel>
+                    <Input
+                      {...field}
+                      id="signup-form-last-name"
+                      aria-invalid={fieldState.invalid}
+                      placeholder="Doe"
+                      autoComplete="family-name"
+                      className="h-11 rounded-xl border-neutral-200 bg-[#fafafa] px-4 text-sm focus-visible:ring-1 focus-visible:ring-neutral-400"
+                      style={
+                        fieldState.invalid
+                          ? { borderColor: ACCENT }
+                          : undefined
+                      }
+                    />
+                    <AbsoluteError message={fieldState.error?.message} />
+                  </Field>
+                )}
+              />
+            </div>
+
+            {/* ACCOUNT ROW */}
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+              <Controller
+                name="username"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <Field className="relative border-none p-0">
+                    <FieldLabel
+                      htmlFor="signup-form-username"
+                      className="mb-2 text-xs font-semibold text-neutral-700"
+                    >
+                      Username
+                    </FieldLabel>
+                    <Input
+                      {...field}
+                      id="signup-form-username"
+                      aria-invalid={fieldState.invalid}
+                      placeholder="johndoe"
+                      autoComplete="username"
+                      className="h-11 rounded-xl border-neutral-200 bg-[#fafafa] px-4 text-sm focus-visible:ring-1 focus-visible:ring-neutral-400"
                       style={
                         fieldState.invalid
                           ? { borderColor: ACCENT }
@@ -263,7 +281,7 @@ export default function RegisterForm() {
                   <Field className="relative border-none p-0">
                     <FieldLabel
                       htmlFor="signup-form-email"
-                      className="text-[11px] font-semibold text-neutral-700 mb-1"
+                      className="mb-2 text-xs font-semibold text-neutral-700"
                     >
                       Email Address
                     </FieldLabel>
@@ -274,7 +292,7 @@ export default function RegisterForm() {
                       aria-invalid={fieldState.invalid}
                       placeholder="john@example.com"
                       autoComplete="email"
-                      className="h-9 rounded-xl border-neutral-200 text-xs focus-visible:ring-1 focus-visible:ring-neutral-400"
+                      className="h-11 rounded-xl border-neutral-200 bg-[#fafafa] px-4 text-sm focus-visible:ring-1 focus-visible:ring-neutral-400"
                       style={
                         fieldState.invalid
                           ? { borderColor: ACCENT }
@@ -287,64 +305,8 @@ export default function RegisterForm() {
               />
             </div>
 
-            {/* PHONE NUMBER */}
-            <Field className="relative border-none p-0">
-              <FieldLabel
-                htmlFor="signup-form-phone"
-                className="text-[11px] font-semibold text-neutral-700 mb-1"
-              >
-                Phone Number
-              </FieldLabel>
-              <div className="flex items-center gap-2">
-                <Controller
-                  name="countryCode"
-                  control={form.control}
-                  render={({ field }) => (
-                    <Select
-                      value={field.value}
-                      onValueChange={field.onChange}
-                    >
-                      <SelectTrigger className="w-[90px] !h-9 rounded-xl border-neutral-200 text-xs font-medium flex items-center justify-between px-2.5">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {COUNTRY_CODES.map((c) => (
-                          <SelectItem key={c.code} value={c.code}>
-                            {c.code}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
-                <Controller
-                  name="phoneNumber"
-                  control={form.control}
-                  render={({ field, fieldState }) => (
-                    <Input
-                      {...field}
-                      id="signup-form-phone"
-                      aria-invalid={fieldState.invalid}
-                      placeholder="123456789"
-                      autoComplete="tel"
-                      style={{
-                        height: "36px",
-                        ...(fieldState.invalid
-                          ? { borderColor: ACCENT }
-                          : {}),
-                      }}
-                      className="flex-1 !h-9 rounded-xl border-neutral-200 text-xs focus-visible:ring-1 focus-visible:ring-neutral-400"
-                    />
-                  )}
-                />
-              </div>
-              <AbsoluteError
-                message={form.formState.errors.phoneNumber?.message}
-              />
-            </Field>
-
             {/* PASSWORDS ROW */}
-            <div className="grid grid-cols-2 gap-2.5">
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
               <Controller
                 name="password"
                 control={form.control}
@@ -352,7 +314,7 @@ export default function RegisterForm() {
                   <Field className="relative border-none p-0">
                     <FieldLabel
                       htmlFor="signup-form-password"
-                      className="text-[11px] font-semibold text-neutral-700 mb-1"
+                      className="mb-2 text-xs font-semibold text-neutral-700"
                     >
                       Password
                     </FieldLabel>
@@ -362,9 +324,9 @@ export default function RegisterForm() {
                         id="signup-form-password"
                         type={showPassword ? "text" : "password"}
                         aria-invalid={fieldState.invalid}
-                        placeholder="••••••••"
+                        placeholder="********"
                         autoComplete="new-password"
-                        className="h-9 rounded-xl border-neutral-200 text-xs pr-8 focus-visible:ring-1 focus-visible:ring-neutral-400"
+                        className="h-11 rounded-xl border-neutral-200 bg-[#fafafa] px-4 text-sm pr-8 focus-visible:ring-1 focus-visible:ring-neutral-400"
                         style={
                           fieldState.invalid
                             ? { borderColor: ACCENT }
@@ -383,9 +345,9 @@ export default function RegisterForm() {
                           className="text-neutral-400 hover:text-neutral-600"
                         >
                           {showPassword ? (
-                            <EyeOff className="size-3.5" />
+                            <EyeOff className="size-4" />
                           ) : (
-                            <Eye className="size-3.5" />
+                            <Eye className="size-4" />
                           )}
                         </InputGroupButton>
                       </InputGroupAddon>
@@ -402,7 +364,7 @@ export default function RegisterForm() {
                   <Field className="relative border-none p-0">
                     <FieldLabel
                       htmlFor="signup-form-confirm"
-                      className="text-[11px] font-semibold text-neutral-700 mb-1"
+                      className="mb-2 text-xs font-semibold text-neutral-700"
                     >
                       Confirm Password
                     </FieldLabel>
@@ -412,9 +374,9 @@ export default function RegisterForm() {
                         id="signup-form-confirm"
                         type={showConfirm ? "text" : "password"}
                         aria-invalid={fieldState.invalid}
-                        placeholder="••••••••"
+                        placeholder="********"
                         autoComplete="new-password"
-                        className="h-9 rounded-xl border-neutral-200 text-xs pr-8 focus-visible:ring-1 focus-visible:ring-neutral-400"
+                        className="h-11 rounded-xl border-neutral-200 bg-[#fafafa] px-4 text-sm pr-8 focus-visible:ring-1 focus-visible:ring-neutral-400"
                         style={
                           fieldState.invalid
                             ? { borderColor: ACCENT }
@@ -433,9 +395,9 @@ export default function RegisterForm() {
                           className="text-neutral-400 hover:text-neutral-600"
                         >
                           {showConfirm ? (
-                            <EyeOff className="size-3.5" />
+                            <EyeOff className="size-4" />
                           ) : (
-                            <Eye className="size-3.5" />
+                            <Eye className="size-4" />
                           )}
                         </InputGroupButton>
                       </InputGroupAddon>
@@ -446,41 +408,8 @@ export default function RegisterForm() {
               />
             </div>
 
-            {/* IDENTITY VERIFICATION */}
-            <Field className="relative space-y-1 border-none p-0">
-              <FieldLabel className="text-[11px] font-semibold text-neutral-700">
-                Identity Verification (ID/Passport)
-              </FieldLabel>
-              <div className="flex gap-2">
-                <Controller
-                  name="frontPhoto"
-                  control={form.control}
-                  render={({ field, fieldState }) => (
-                    <FileDropField
-                      label="Front Photo"
-                      file={field.value as File | undefined}
-                      onChange={field.onChange}
-                      error={fieldState.error?.message}
-                    />
-                  )}
-                />
-                <Controller
-                  name="backPhoto"
-                  control={form.control}
-                  render={({ field, fieldState }) => (
-                    <FileDropField
-                      label="Back Photo"
-                      file={field.value as File | undefined}
-                      onChange={field.onChange}
-                      error={fieldState.error?.message}
-                    />
-                  )}
-                />
-              </div>
-            </Field>
-
             {/* CHECKBOXES */}
-            <div className="space-y-1 pt-1">
+            <div className="space-y-3 pt-1">
               <Controller
                 name="agreeTerms"
                 control={form.control}
@@ -493,14 +422,14 @@ export default function RegisterForm() {
                       id="signup-form-terms"
                       checked={!!field.value}
                       onCheckedChange={field.onChange}
-                      className="shrink-0 rounded border-neutral-300 data-[state=checked]:bg-[#FF3333] data-[state=checked]:border-[#FF3333] size-3.5"
+                      className="shrink-0 rounded border-neutral-300 data-[state=checked]:bg-[#F73030] data-[state=checked]:border-[#F73030] size-4"
                     />
                     <FieldLabel
                       htmlFor="signup-form-terms"
-                      className="text-[11px] font-normal leading-none text-neutral-600 cursor-pointer select-none"
+                      className="text-xs font-normal leading-5 text-neutral-600 cursor-pointer select-none"
                     >
                       I agree to the{" "}
-                      <span className="font-medium text-[#FF3333] hover:underline">
+                      <span className="font-medium text-[#F73030] hover:underline">
                         Terms & Conditions
                       </span>
                     </FieldLabel>
@@ -520,14 +449,14 @@ export default function RegisterForm() {
                       id="signup-form-privacy"
                       checked={!!field.value}
                       onCheckedChange={field.onChange}
-                      className="shrink-0 rounded border-neutral-300 data-[state=checked]:bg-[#FF3333] data-[state=checked]:border-[#FF3333] size-3.5"
+                      className="shrink-0 rounded border-neutral-300 data-[state=checked]:bg-[#F73030] data-[state=checked]:border-[#F73030] size-4"
                     />
                     <FieldLabel
                       htmlFor="signup-form-privacy"
-                      className="text-[11px] font-normal leading-none text-neutral-600 cursor-pointer select-none"
+                      className="text-xs font-normal leading-5 text-neutral-600 cursor-pointer select-none"
                     >
                       I accept the{" "}
-                      <span className="font-medium text-[#FF3333] hover:underline">
+                      <span className="font-medium text-[#F73030] hover:underline">
                         Privacy Policy
                       </span>
                     </FieldLabel>
@@ -538,13 +467,14 @@ export default function RegisterForm() {
           </form>
         </CardContent>
 
-        <CardFooter className="flex flex-col gap-2 p-0 pt-2 border-none">
+        <CardFooter className="flex flex-col gap-2 gap-4 border-none p-0 pt-7">
           <Button
             type="submit"
             form="signup-form"
-            className="w-full h-9 rounded-xl bg-[#FF3333] text-xs font-semibold text-white hover:bg-[#e02b2b] transition-all shadow-md shadow-red-500/20"
+            disabled={isLoading}
+            className="h-12 w-full rounded-xl bg-[#F73030] text-sm font-semibold text-white shadow-md shadow-red-500/20 transition-colors hover:bg-[#F73030]/90"
           >
-            Sign Up
+            {isLoading ? "Creating account..." : "Sign Up"}
           </Button>
 
           <div className="flex w-full items-center gap-2">
@@ -559,9 +489,9 @@ export default function RegisterForm() {
             <Button
               type="button"
               variant="outline"
-              className="flex-1 h-8 rounded-xl border-neutral-200 font-medium text-[11px] text-neutral-700 hover:bg-neutral-50 gap-1.5"
+              className="h-11 flex-1 rounded-xl border-neutral-200 font-medium text-[11px] text-neutral-700 hover:bg-neutral-50 gap-1.5"
             >
-              <svg className="size-3.5" viewBox="0 0 24 24">
+              <svg className="size-4" viewBox="0 0 24 24">
                 <path
                   fill="#4285F4"
                   d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -584,7 +514,7 @@ export default function RegisterForm() {
             <Button
               type="button"
               variant="outline"
-              className="flex-1 h-8 rounded-xl border-neutral-200 font-medium text-[11px] text-neutral-700 hover:bg-neutral-50 gap-1.5"
+              className="h-11 flex-1 rounded-xl border-neutral-200 font-medium text-[11px] text-neutral-700 hover:bg-neutral-50 gap-1.5"
             >
               <svg className="size-3.5 fill-[#1877F2]" viewBox="0 0 24 24">
                 <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
@@ -594,11 +524,11 @@ export default function RegisterForm() {
           </div>
 
           {/* LOGIN ROUTE LINK */}
-          <p className="mt-1 text-center text-[11px] text-neutral-500">
+          <p className="mt-1 text-center text-sm leading-6 text-neutral-500">
             Already have an account?{" "}
             <Link
               href="/login"
-              className="font-semibold text-[#FF3333] hover:underline"
+              className="font-semibold text-[#F73030] hover:underline"
             >
               Log in
             </Link>

@@ -1,58 +1,66 @@
 "use client";
 
-import React, { useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useEffect, useState } from "react";
+import { BANNER_IMAGES } from "./home-content.data";
 
-// List your banner images stored in your /public folder
-const bannerImages = [
-  "/img/banner.png",
-  "/img/banner1.png",
-];
+const AUTOPLAY_DELAY = 3000;
 
 export default function HomeBanner() {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [paused, setPaused] = useState(false);
 
-  const handlePrev = () => {
-    setCurrentIndex((prev) =>
-      prev === 0 ? bannerImages.length - 1 : prev - 1
-    );
-  };
 
-  const handleNext = () => {
-    setCurrentIndex((prev) =>
-      prev === bannerImages.length - 1 ? 0 : prev + 1
-    );
-  };
+  useEffect(() => {
+    if (paused) return;
+    const interval = window.setInterval(() => {
+      setCurrentIndex((index) => (index + 1) % BANNER_IMAGES.length);
+    }, AUTOPLAY_DELAY);
+    return () => window.clearInterval(interval);
+  }, [paused]);
 
   return (
-    <section className="mx-auto w-full max-w-7xl px-4 sm:px-8 my-6 bg-white">
-      <div className="relative overflow-hidden shadow-sm bg-white">
-        
-        <img
-          src={bannerImages[currentIndex]}
-          alt="Home Banner"
-          className="h-auto w-full object-cover"
-        />
-
-        {/* Left Scroll Arrow */}
-        <button
-          type="button"
-          onClick={handlePrev}
-          aria-label="Previous Banner"
-          className="absolute left-3 top-1/2 flex size-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/80 text-gray-800 shadow-md backdrop-blur-sm transition-all hover:bg-white active:scale-95 md:left-5 md:size-11"
+    <section className="mx-auto my-6 w-full max-w-7xl bg-white px-4 sm:px-8">
+      <div
+        className="group relative aspect-[16/6] min-h-[220px] overflow-hidden rounded-3xl bg-neutral-100 shadow-sm sm:min-h-[280px]"
+        onMouseEnter={() => setPaused(true)}
+        onMouseLeave={() => setPaused(false)}
+        aria-roledescription="carousel"
+        aria-label="Featured rentals"
+      >
+        <div
+          className="flex h-full transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none"
+          style={{ transform: `translateX(-${currentIndex * 100}%)` }}
         >
-          <ChevronLeft className="size-5 md:size-6" />
-        </button>
+          {BANNER_IMAGES.map((image, index) => (
+            <div key={image} className="h-full w-full shrink-0">
+              <img
+                src={image}
+                alt={`Featured rental banner ${index + 1}`}
+                className="h-full w-full object-cover"
+                draggable={false}
+              />
+            </div>
+          ))}
+        </div>
 
-        {/* Right Scroll Arrow */}
-        <button
-          type="button"
-          onClick={handleNext}
-          aria-label="Next Banner"
-          className="absolute right-3 top-1/2 flex size-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/80 text-gray-800 shadow-md backdrop-blur-sm transition-all hover:bg-white active:scale-95 md:right-5 md:size-11"
-        >
-          <ChevronRight className="size-5 md:size-6" />
-        </button>
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/30 to-transparent" />
+
+
+
+        <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full bg-black/20 px-3 py-2 backdrop-blur-sm">
+          {BANNER_IMAGES.map((image, index) => (
+            <button
+              key={image}
+              type="button"
+              onClick={() => setCurrentIndex(index)}
+              aria-label={`Show banner ${index + 1}`}
+              aria-current={index === currentIndex ? "true" : undefined}
+              className={`h-2 rounded-full transition-all duration-300 ${
+                index === currentIndex ? "w-7 bg-[#F73030]" : "w-2 bg-white/80 hover:bg-white"
+              }`}
+            />
+          ))}
+        </div>
       </div>
     </section>
   );

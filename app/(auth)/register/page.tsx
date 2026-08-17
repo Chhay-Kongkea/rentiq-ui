@@ -1,7 +1,7 @@
 import RegisterForm from "@/components/register";
 export default function RegisterPage() {
   return (
-    <main className="w-full max-w-5xl mx-auto p-4">
+    <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:py-10">
       <RegisterForm/>
     </main>
   );

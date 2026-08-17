@@ -1,4 +1,8 @@
+"use client";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { useGetItemRequestQuery } from "@/redux/services/userApi";
+import { useGetCategoriesQuery } from "@/redux/services/categoryApi";
 import {
   Home,
   Tag,
@@ -8,6 +12,11 @@ import {
   Search,
   CheckCircle2,
   Camera,
+  Car,
+  Wrench,
+  Smartphone,
+  PartyPopper,
+  Dumbbell,
   Banknote,
   CalendarDays,
   MapPin,
@@ -30,14 +39,6 @@ type RequestSummary = {
   location: string;
 };
 
-// Swap this for the real submitted request (server data / query params / DB lookup).
-const requestSummary: RequestSummary = {
-  itemCategory: "Cinema Camera",
-  budgetRange: "$80 – $120 / day",
-  rentalDates: "Oct 12 – Oct 15",
-  location: "Sen Sok, Phnom Penh",
-};
-
 const steps = [
   {
     number: 1,
@@ -57,6 +58,12 @@ const steps = [
 ];
 
 export default function RequestSuccessPage() {
+  const searchParams = useSearchParams();
+  const requestId = searchParams.get("requestId") || "";
+  const { data: request, isLoading } = useGetItemRequestQuery(requestId, { skip: !requestId });
+  const { data: categories = [] } = useGetCategoriesQuery();
+  const categoryName = categories.find((category) => category.id === request?.categoryId)?.name || "Rental item";
+  const CategoryIcon = getCategoryIcon(categoryName);
   return (
     <div className="min-h-screen bg-[#F2F4F7] text-[#1A2340]">
       {/* <SiteHeader />
@@ -88,24 +95,24 @@ export default function RequestSuccessPage() {
           </div>
           <div className="grid gap-6 px-6 py-6 sm:grid-cols-2 sm:gap-x-10">
             <SummaryRow
-              icon={Camera}
+              icon={CategoryIcon}
               label="Item Category"
-              value={requestSummary.itemCategory}
+              value={request ? `Category #${request.categoryId ?? "ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â"} Ãƒâ€šÃ‚Â· ${request.title || "Rental request"}` : isLoading ? "Loading..." : "Request details unavailable"}
             />
             <SummaryRow
               icon={Banknote}
               label="Budget Range"
-              value={requestSummary.budgetRange}
+              value={request ? `$${request.budgetMin ?? 0} - $${request.budgetMax ?? 0} / day` : "ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â"}
             />
             <SummaryRow
               icon={CalendarDays}
               label="Rental Dates"
-              value={requestSummary.rentalDates}
+              value={request ? `${request.neededFrom || ""} ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“ ${request.neededTo || ""}` : "ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â"}
             />
             <SummaryRow
               icon={MapPin}
               label="Location"
-              value={requestSummary.location}
+              value={request ? `${request.latitude?.toFixed?.(5) ?? ""}, ${request.longitude?.toFixed?.(5) ?? ""}` : "ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â"}
             />
           </div>
         </div>
@@ -155,6 +162,17 @@ export default function RequestSuccessPage() {
       
     </div>
   );
+}
+
+function getCategoryIcon(categoryName: string) {
+  const name = categoryName.toLowerCase();
+  if (name.includes("vehicle") || name.includes("car") || name.includes("motor")) return Car;
+  if (name.includes("tool") || name.includes("equipment")) return Wrench;
+  if (name.includes("electronic") || name.includes("drone")) return Smartphone;
+  if (name.includes("party") || name.includes("event")) return PartyPopper;
+  if (name.includes("sport") || name.includes("outdoor")) return Dumbbell;
+  if (name.includes("camera") || name.includes("photo")) return Camera;
+  return Tag;
 }
 
 function SummaryRow({

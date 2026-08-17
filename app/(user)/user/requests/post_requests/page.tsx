@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useGetCategoriesQuery } from "@/redux/services/categoryApi";
+import { useCreateItemRequestMutation } from "@/redux/services/userApi";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -56,6 +58,8 @@ type FormErrors = Partial<Record<FieldKey, string>>;
 
 export default function PostRequestPage() {
   const router = useRouter();
+  const { data: categories = [] } = useGetCategoriesQuery();
+  const [createItemRequest] = useCreateItemRequestMutation();
 
   const [category, setCategory] = useState("");
   const [itemName, setItemName] = useState("");
@@ -119,6 +123,7 @@ export default function PostRequestPage() {
         next.endDate = "End date must be on or after the start date.";
     }
 
+    if (!pickupCoordinates) next.location = "Pin the pickup location on the map.";
     if (!location.trim())
       next.location = "Add a neighborhood or city for pickup.";
 
@@ -142,20 +147,9 @@ export default function PostRequestPage() {
 
     setIsSubmitting(true);
     try {
-      // Wire this up to your API route / server action.
-      console.log({
-        category,
-        itemName,
-        description,
-        minBudget,
-        maxBudget,
-        startDate,
-        endDate,
-        location,
-        pickupCoordinates,
-      });
-
-      router.push("/user/requests/requests_submit");
+      if (!pickupCoordinates) return;
+      const createdRequest = await createItemRequest({ categoryId: Number(category), title: itemName.trim(), description: description.trim(), budgetMin: Number(minBudget), budgetMax: Number(maxBudget), neededFrom: startDate, neededTo: endDate, latitude: pickupCoordinates.lat, longitude: pickupCoordinates.lng, radiusKm: 10 }).unwrap();
+      router.push(`/user/requests/requests_submit?requestId=${createdRequest.id}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -192,9 +186,9 @@ export default function PostRequestPage() {
                 className={fieldClass(!!errors.category, "appearance-none")}
               >
                 <option value="">Select a category</option>
-                {CATEGORIES.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
+                {categories.filter((c) => c.active).map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
                   </option>
                 ))}
               </select>
@@ -605,7 +599,7 @@ function SiteFooter() {
       </div>
 
       <p className="mt-12 text-center text-xs text-gray-400">
-        © 2026 RentalHub. All rights reserved.
+        ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â© 2026 RentalHub. All rights reserved.
       </p>
     </footer>
   );

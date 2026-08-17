@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useGetMyItemRequestsQuery } from "@/redux/services/userApi";
 import Link from "next/link";
 import {
   Home,
@@ -37,6 +38,7 @@ type RequestCard = {
   budget: string;
   dates: string;
   location: string;
+  locationUrl?: string;
   status: Status;
   icon: React.ComponentType<{ className?: string }>;
   iconBg: string;
@@ -116,7 +118,7 @@ const REQUEST_TEMPLATES: Omit<RequestCard, "id">[] = [
 ];
 
 // Builds a page's worth of demo cards for a given tab. Replace with a real
-// data fetch keyed by (tabKey, page) — this only exists so pagination has
+// data fetch keyed by (tabKey, page) ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â this only exists so pagination has
 // something to visibly page through.
 function getRequestsForPage(tabKey: TabKey, page: number): RequestCard[] {
   const tab = TABS.find((t) => t.key === tabKey)!;
@@ -133,13 +135,12 @@ export default function MyRequestsPage() {
   const [activeTab, setActiveTab] = useState<TabKey>("open");
   const [page, setPage] = useState(1);
 
-  const activeTabMeta = TABS.find((t) => t.key === activeTab)!;
+  const { data: requestPage, isLoading, isError } = useGetMyItemRequestsQuery({ pageNumber: 0, pageSize: 100 });
+  const apiRequests = requestPage?.content ?? [];
+  const statusByTab: Record<TabKey, string> = { open: "OPEN", booked: "MATCHED", closed: "CANCELLED", expired: "EXPIRED" };
+  const activeTabMeta = { ...TABS.find((t) => t.key === activeTab)!, count: apiRequests.filter((request) => request.status === statusByTab[activeTab]).length };
+  const requests = useMemo(() => apiRequests.filter((request) => request.status === statusByTab[activeTab]).slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE).map((request) => ({ id: request.id, title: request.title || "Rental request", description: request.description || "", budget: request.budgetMin != null || request.budgetMax != null ? `${request.budgetMin ?? 0} - ${request.budgetMax ?? 0}` : "Budget not specified", dates: [request.neededFrom, request.neededTo].filter(Boolean).join(" - ") || "Dates flexible", location: request.location || (request.latitude != null && request.longitude != null ? `Pinned: ${request.latitude.toFixed(5)}, ${request.longitude.toFixed(5)}` : "Location not specified"), locationUrl: request.latitude != null && request.longitude != null ? `https://www.google.com/maps?q=${request.latitude},${request.longitude}` : undefined, status: request.status === "OPEN" ? "Active" : "Urgent", icon: Tag, iconBg: "bg-[#253C95]", offerCount: request.offerCount || 0, offerAvatars: Math.min(request.offerCount || 0, 3) } as RequestCard)), [apiRequests, activeTab, page]);
   const totalPages = Math.max(1, Math.ceil(activeTabMeta.count / PAGE_SIZE));
-
-  const requests = useMemo(
-    () => getRequestsForPage(activeTab, page),
-    [activeTab, page]
-  );
 
   function handleTabChange(tab: TabKey) {
     setActiveTab(tab);
@@ -198,7 +199,7 @@ export default function MyRequestsPage() {
         </div>
 
         <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {requests.map((request) => (
+          {isLoading ? <p className="col-span-full py-12 text-center text-sm text-gray-500">Loading requests...</p> : isError ? <p className="col-span-full py-12 text-center text-sm text-red-500">Unable to load requests.</p> : requests.map((request) => (
             <RequestListCard key={request.id} request={request} />
           ))}
         </div>
@@ -217,93 +218,19 @@ export default function MyRequestsPage() {
 
 function RequestListCard({ request }: { request: RequestCard }) {
   const Icon = request.icon;
-  const statusStyles =
-    request.status === "Urgent"
-      ? "bg-[#D6F5E7] text-[#0F9D58]"
-      : "bg-[#E4EBFB] text-[#3958A5]";
-
+  const statusStyles = request.status === "Urgent" ? "bg-emerald-50 text-emerald-700" : "bg-blue-50 text-[#253C95]";
   return (
-    <div className="flex flex-col overflow-hidden rounded-2xl bg-white shadow-[0_4px_24px_rgba(20,30,60,0.06)]">
-      <div className="flex items-start justify-between p-5 pb-0">
-        <span
-          className={`flex h-14 w-14 items-center justify-center rounded-xl text-white ${request.iconBg}`}
-        >
-          <Icon className="h-6 w-6" />
-        </span>
-        <span
-          className={`rounded-full px-3 py-1 text-xs font-semibold ${statusStyles}`}
-        >
-          {request.status}
-        </span>
+    <article className="group flex min-h-[390px] flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-lg">
+      <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4"><span className={`flex h-11 w-11 items-center justify-center rounded-xl text-white shadow-sm ${request.iconBg}`}><Icon className="h-5 w-5" /></span><span className={`rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide ${statusStyles}`}>{request.status}</span></div>
+      <div className="flex flex-1 flex-col px-5 py-5"><h3 className="line-clamp-1 text-lg font-bold tracking-tight text-[#1A2340]">{request.title}</h3><p className="mt-2 line-clamp-2 min-h-10 text-sm leading-5 text-slate-500">{request.description || "No description provided."}</p>
+        <dl className="mt-5 space-y-3 rounded-xl bg-slate-50 p-3.5"><div className="flex items-center gap-3 text-sm text-slate-600"><Banknote className="h-4 w-4 text-[#253C95]" /><span className="truncate">{request.budget}</span></div><div className="flex items-center gap-3 text-sm text-slate-600"><CalendarDays className="h-4 w-4 text-[#253C95]" /><span className="truncate">{request.dates}</span></div><div className="flex items-center gap-3 text-sm text-slate-600"><MapPin className="h-4 w-4 shrink-0 text-[#F73030]" />{request.locationUrl ? <a href={request.locationUrl} target="_blank" rel="noreferrer" className="truncate font-medium text-[#253C95] underline-offset-2 hover:underline">{request.location}</a> : <span className="truncate">{request.location}</span>}</div></dl>
+        <div className="mt-auto flex items-end justify-between gap-3 pt-5"><div><p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Offers received</p><p className="mt-1 text-sm font-semibold text-slate-700">{request.offerCount} {request.offerCount === 1 ? "offer" : "offers"}</p></div><Link href={`/user/requests/requests_detail?requestId=${request.id}`} className="rounded-lg bg-[#F73030] px-3.5 py-2 text-xs font-bold text-white transition hover:bg-[#dd2b2b]">{request.offerCount ? "View offers" : "View request"}</Link></div>
       </div>
-
-      <div className="px-5 pt-4">
-        <h3 className="text-lg font-bold text-[#1A2340]">{request.title}</h3>
-        <p className="mt-1 line-clamp-2 text-sm text-gray-500">
-          {request.description}
-        </p>
-
-        <dl className="mt-4 space-y-2">
-          <div className="flex items-center gap-2 text-sm text-gray-600">
-            <Banknote className="h-4 w-4 text-gray-400" />
-            <span>Budget: {request.budget}</span>
-          </div>
-          <div className="flex items-center gap-2 text-sm text-gray-600">
-            <CalendarDays className="h-4 w-4 text-gray-400" />
-            <span>{request.dates}</span>
-          </div>
-          <div className="flex items-center gap-2 text-sm text-gray-600">
-            <MapPin className="h-4 w-4 text-gray-400" />
-            <span>{request.location}</span>
-          </div>
-        </dl>
-      </div>
-
-      <div className="mt-5 flex items-center justify-between bg-[#EEF2FC] px-5 py-4">
-        <div>
-          <p className="text-[11px] font-bold tracking-wide text-gray-500">
-            OFFERS RECEIVED
-          </p>
-          {request.offerCount === 0 ? (
-            <p className="mt-1 flex items-center gap-1 text-xs text-gray-400">
-              <Clock className="h-3.5 w-3.5" />
-              No offers yet
-            </p>
-          ) : (
-            <div className="mt-1 flex items-center">
-              {Array.from({ length: Math.min(request.offerAvatars, 3) }).map(
-                (_, i) => (
-                  <span
-                    key={i}
-                    className="-ml-1.5 flex h-6 w-6 items-center justify-center rounded-full border-2 border-white bg-gray-300 text-gray-600 first:ml-0"
-                  >
-                    <User className="h-3 w-3" />
-                  </span>
-                )
-              )}
-              {request.offerCount > request.offerAvatars && (
-                <span className="-ml-1.5 flex h-6 w-6 items-center justify-center rounded-full border-2 border-white bg-[#1A2340] text-[10px] font-semibold text-white">
-                  +{request.offerCount - request.offerAvatars}
-                </span>
-              )}
-            </div>
-          )}
-        </div>
-        <Link
-          href="/user/requests/requests_detail"
-          className="text-sm font-semibold text-[#E8402C] hover:underline"
-        >
-          {request.offerCount === 0
-            ? "No Offers"
-            : `View ${request.offerCount} Offer${request.offerCount > 1 ? "s" : ""}`}
-        </Link>
-      </div>
-    </div>
+    </article>
   );
 }
-
 // Standard "windowed" pagination range: always shows first, last, the
-// current page ± siblingCount, and collapses everything else into a
+// current page ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â± siblingCount, and collapses everything else into a
 // single "..." on each side once there's a gap worth collapsing.
 type PageItem = number | "left-ellipsis" | "right-ellipsis";
 

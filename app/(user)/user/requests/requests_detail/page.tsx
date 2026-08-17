@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useGetItemRequestOffersQuery, useGetItemRequestQuery } from "@/redux/services/userApi";
+import { useGetCategoriesQuery } from "@/redux/services/categoryApi";
 import Link from "next/link";
 import {
   Home,
@@ -22,6 +25,11 @@ import {
   MessageCircle,
   Share2,
   Camera,
+  Car,
+  Wrench,
+  Smartphone,
+  PartyPopper,
+  Dumbbell,
   Music2,
   PlayCircle,
 } from "lucide-react";
@@ -76,13 +84,17 @@ const OFFERS: Offer[] = [
 
 const EXPIRES_IN_SECONDS = 4 * 3600 + 22 * 60 + 15;
 
-export default function RequestDetailPage({
-  params,
-}: {
-  params: { id: string };
-}) {
+export default function RequestDetailPage() {
+  const searchParams = useSearchParams();
+  const requestId = searchParams.get("requestId") || "";
+  const { data: request, isLoading: requestLoading } = useGetItemRequestQuery(requestId, { skip: !requestId });
+  const { data: categories = [] } = useGetCategoriesQuery();
+  const categoryName = categories.find((category) => category.id === request?.categoryId)?.name || "Rental item";
+  const CategoryIcon = getCategoryIcon(categoryName);
+  const { data: apiOffers = [], isLoading: offersLoading } = useGetItemRequestOffersQuery(requestId, { skip: !requestId });
   const [sortAsc, setSortAsc] = useState(true);
-  const sortedOffers = [...OFFERS].sort((a, b) =>
+  const offers: Offer[] = apiOffers.map((offer) => ({ id: offer.id, name: offer.ownerId || "Vendor", rating: 0, reviewCount: 0, title: offer.itemTitle || "Rental offer", quote: offer.message || "No message provided.", totalPrice: offer.offeredPrice || 0, perDay: offer.offeredPrice || 0, bestMatch: false }));
+  const sortedOffers = [...offers].sort((a, b) =>
     sortAsc ? a.totalPrice - b.totalPrice : b.totalPrice - a.totalPrice
   );
 
@@ -99,7 +111,7 @@ export default function RequestDetailPage({
               <span className="mx-1 text-gray-300">&gt;</span> Requests{" "}
               <span className="mx-1 text-gray-300">&gt;</span>
               <span className="font-semibold text-[#E8402C]">
-                Request #{params.id}
+                Request #{requestId || "ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â"}
               </span>
             </p>
             <h1 className="mt-1 text-2xl font-bold text-[#1A2340]">
@@ -110,7 +122,7 @@ export default function RequestDetailPage({
         </div>
 
         <div className="mt-8 grid gap-8 lg:grid-cols-[400px_1fr]">
-          <RequestSummaryCard />
+          <RequestSummaryCard request={request} loading={requestLoading} categoryName={categoryName} CategoryIcon={CategoryIcon} />
 
           <section>
             <div className="flex items-center justify-between">
@@ -130,7 +142,7 @@ export default function RequestDetailPage({
             </div>
 
             <div className="mt-5 space-y-5">
-              {sortedOffers.map((offer) => (
+              {offersLoading ? <p className="py-10 text-center text-sm text-gray-500">Loading offers...</p> : sortedOffers.map((offer) => (
                 <OfferCard key={offer.id} offer={offer} />
               ))}
             </div>
@@ -173,7 +185,18 @@ function ExpiryCountdown({ initialSeconds }: { initialSeconds: number }) {
   );
 }
 
-function RequestSummaryCard() {
+function getCategoryIcon(categoryName: string) {
+  const name = categoryName.toLowerCase();
+  if (name.includes("vehicle") || name.includes("car") || name.includes("motor")) return Car;
+  if (name.includes("tool") || name.includes("equipment")) return Wrench;
+  if (name.includes("electronic") || name.includes("drone")) return Smartphone;
+  if (name.includes("party") || name.includes("event")) return PartyPopper;
+  if (name.includes("sport") || name.includes("outdoor")) return Dumbbell;
+  if (name.includes("camera") || name.includes("photo")) return Camera;
+  return Tag;
+}
+
+function RequestSummaryCard({ request, loading, categoryName, CategoryIcon }: { request?: { title?: string; categoryId?: number; budgetMin?: number; budgetMax?: number; neededFrom?: string; neededTo?: string; latitude?: number; longitude?: number }; loading: boolean; categoryName: string; CategoryIcon: React.ComponentType<{ className?: string }> }) {
   return (
     <div className="h-fit rounded-2xl bg-white p-6 shadow-[0_4px_24px_rgba(20,30,60,0.06)]">
       <p className="flex items-center gap-2 text-sm font-semibold text-[#1A2340]">
@@ -182,13 +205,13 @@ function RequestSummaryCard() {
       </p>
 
       <div className="mt-4 flex gap-4">
-        <div className="h-20 w-24 shrink-0 overflow-hidden rounded-lg bg-gray-200" />
+        <div className="flex h-20 w-24 shrink-0 items-center justify-center rounded-xl bg-[#EEF2FC] text-[#253C95]"><CategoryIcon className="h-9 w-9" /></div>
         <div>
           <h2 className="text-base font-bold leading-snug text-[#1A2340]">
-            Sony Alpha a7 IV + 24-70mm Lens
+            {loading ? "Loading request..." : request?.title || "Request details unavailable"}
           </h2>
           <p className="mt-1 text-sm text-gray-500">
-            Electronics &amp; Photography
+            {categoryName}
           </p>
           <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-[#E4EBFB] px-3 py-1 text-xs font-semibold text-[#1A2E6B]">
             <BadgeCheck className="h-3.5 w-3.5" />
@@ -203,14 +226,14 @@ function RequestSummaryCard() {
             BUDGET
           </p>
           <p className="mt-1 text-lg font-bold text-[#E8402C]">
-            $45.00 / day
+            {request ? `$${request.budgetMin ?? 0} - $${request.budgetMax ?? 0} / day` : "ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â"}
           </p>
         </div>
         <div>
           <p className="text-xs font-bold tracking-wide text-gray-400">
             DURATION
           </p>
-          <p className="mt-1 text-lg font-bold text-[#1A2340]">3 Days</p>
+          <p className="mt-1 text-lg font-bold text-[#1A2340]">{request?.neededFrom && request?.neededTo ? `${Math.max(1, Math.ceil((new Date(request.neededTo).getTime() - new Date(request.neededFrom).getTime()) / 86400000))} Days` : "ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â"}</p>
         </div>
       </div>
 
@@ -219,9 +242,7 @@ function RequestSummaryCard() {
           <CalendarDays className="h-4 w-4" />
           RENTAL PERIOD
         </p>
-        <p className="mt-1 text-sm font-semibold text-[#1A2340]">
-          Oct 12, 2024 — Oct 15, 2024
-        </p>
+        <p className="mt-1 text-sm font-semibold text-[#1A2340]">{request ? `From: ${request.neededFrom || "-"} - To: ${request.neededTo || "-"}` : loading ? "Loading..." : "-"}</p>
       </div>
 
       <div className="mt-6 border-t border-gray-100 pt-6">
@@ -234,7 +255,7 @@ function RequestSummaryCard() {
           <div className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center">
             <MapPin className="h-7 w-7 fill-[#E8402C] text-white drop-shadow" />
             <span className="mt-1 rounded-full bg-white/90 px-2 py-0.5 text-[10px] font-semibold text-gray-600 shadow-sm">
-              Central Market
+              {request?.latitude != null && request?.longitude != null ? `${request.latitude.toFixed(5)}, ${request.longitude.toFixed(5)}` : "Pinned location"}
             </span>
           </div>
         </div>

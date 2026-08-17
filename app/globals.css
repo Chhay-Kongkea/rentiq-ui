@@ -99,45 +99,206 @@
   --sidebar-ring: oklch(0.708 0 0);
 }
 
+/* Mid-dark palette: approximately 50% lightness for comfortable dark mode. */
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
+  --background: oklch(0.30 0.035 255);
+  --foreground: oklch(0.97 0.015 255);
+  --card: oklch(0.38 0.035 255);
+  --card-foreground: oklch(0.97 0.015 255);
+  --popover: oklch(0.38 0.035 255);
+  --popover-foreground: oklch(0.97 0.015 255);
+  --primary: oklch(0.90 0.02 255);
+  --primary-foreground: oklch(0.24 0.035 255);
+  --secondary: oklch(0.46 0.035 255);
+  --secondary-foreground: oklch(0.97 0.015 255);
+  --muted: oklch(0.46 0.035 255);
+  --muted-foreground: oklch(0.82 0.02 255);
+  --accent: oklch(0.46 0.035 255);
+  --accent-foreground: oklch(0.97 0.015 255);
   --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
+  --border: oklch(1 0 0 / 22%);
+  --input: oklch(1 0 0 / 25%);
+  --ring: oklch(0.76 0.035 255);
   --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
-}
-
-@layer base {
+  --chart-2: oklch(0.65 0.035 255);
+  --chart-3: oklch(0.55 0.035 255);
+  --chart-4: oklch(0.46 0.035 255);
+  --chart-5: oklch(0.38 0.035 255);
+  --sidebar: oklch(0.35 0.035 255);
+  --sidebar-foreground: oklch(0.97 0.015 255);
+  --sidebar-primary: oklch(0.65 0.12 255);
+  --sidebar-primary-foreground: oklch(0.97 0.015 255);
+  --sidebar-accent: oklch(0.46 0.035 255);
+  --sidebar-accent-foreground: oklch(0.97 0.015 255);
+  --sidebar-border: oklch(1 0 0 / 22%);
+  --sidebar-ring: oklch(0.76 0.035 255);
+}@layer base {
   * {
     @apply border-border;
   }
   body {
     @apply bg-background text-foreground font-sans antialiased;
   }
+}
+
+@keyframes operation-float {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-12px) rotate(0.5deg); }
+}
+
+@keyframes operation-enter {
+  from { opacity: 0; transform: translateY(28px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes operation-dash {
+  to { stroke-dashoffset: -48; }
+}
+
+@keyframes operation-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgb(247 48 48 / 0.22); }
+  50% { box-shadow: 0 0 0 9px rgb(247 48 48 / 0); }
+}
+
+.operation-illustration {
+  animation: operation-float 5s ease-in-out infinite;
+}
+
+.operation-step {
+  animation: operation-enter 700ms ease-out both;
+}
+
+.operation-path {
+  animation: operation-dash 3.5s linear infinite;
+}
+
+
+.operation-step-number {
+  animation: operation-pulse 2.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .operation-illustration,
+  .operation-step,
+  .operation-path,
+  .operation-step-number {
+    animation: none;
+  }
+}
+
+/*
+ * Dark-mode compatibility layer for screens that still use literal neutral
+ * Tailwind colors instead of the semantic theme tokens above.
+ */
+.dark body {
+  background-color: var(--background);
+  color: var(--foreground);
+  color-scheme: dark;
+}
+
+.dark .bg-white,
+.dark .bg-slate-50,
+.dark .bg-gray-50,
+.dark .bg-neutral-50,
+.dark .bg-\[\#fafafa\],
+.dark .bg-\[\#Fcfcfc\],
+.dark .bg-\[\#fcfcfd\],
+.dark .bg-\[\#f7f7f8\],
+.dark .bg-\[\#f7f8fb\],
+.dark .bg-\[\#f7f8fd\],
+.dark .bg-\[\#F7F9FE\],
+.dark .bg-\[\#f8fafc\],
+.dark .bg-\[\#F8F9FA\] {
+  background-color: var(--card) !important;
+}
+
+.dark .bg-slate-100,
+.dark .bg-slate-200,
+.dark .bg-gray-100,
+.dark .bg-gray-200,
+.dark .bg-neutral-100,
+.dark .bg-neutral-200,
+.dark .bg-\[\#f0efec\],
+.dark .bg-\[\#f3f1ee\],
+.dark .bg-\[\#f3edea\],
+.dark .bg-\[\#F2F4F7\],
+.dark .bg-\[\#F3F4F6\],
+.dark .bg-\[\#F4F4F6\],
+.dark .bg-\[\#eef1fb\],
+.dark .bg-\[\#eef2ff\],
+.dark .bg-\[\#EEF2FC\],
+.dark .bg-\[\#eaf1ff\],
+.dark .bg-\[\#E4EBFB\],
+.dark .bg-\[\#E6ECFA\] {
+  background-color: var(--muted) !important;
+}
+
+.dark .text-black,
+.dark .text-slate-900,
+.dark .text-slate-800,
+.dark .text-gray-900,
+.dark .text-gray-800,
+.dark .text-neutral-900,
+.dark .text-neutral-800,
+.dark .text-\[\#222\],
+.dark .text-\[\#333\],
+.dark .text-\[\#1a1a1a\],
+.dark .text-\[\#1A2340\],
+.dark .text-\[\#0f172a\] {
+  color: var(--foreground) !important;
+}
+
+.dark .text-slate-700,
+.dark .text-slate-600,
+.dark .text-gray-700,
+.dark .text-gray-600,
+.dark .text-neutral-700,
+.dark .text-neutral-600,
+.dark .text-\[\#3d3d3d\],
+.dark .text-\[\#374151\],
+.dark .text-\[\#4b5563\],
+.dark .text-\[\#555\],
+.dark .text-\[\#5b6472\],
+.dark .text-\[\#6b7280\] {
+  color: color-mix(in oklab, var(--foreground) 82%, transparent) !important;
+}
+
+.dark .text-slate-500,
+.dark .text-slate-400,
+.dark .text-gray-500,
+.dark .text-gray-400,
+.dark .text-neutral-500,
+.dark .text-neutral-400,
+.dark .text-\[\#9ca3af\],
+.dark .text-\[\#b0b7c3\] {
+  color: var(--muted-foreground) !important;
+}
+
+.dark .border-white,
+.dark .border-slate-50,
+.dark .border-slate-100,
+.dark .border-slate-200,
+.dark .border-slate-300,
+.dark .border-gray-100,
+.dark .border-gray-200,
+.dark .border-gray-300,
+.dark .border-neutral-100,
+.dark .border-neutral-200,
+.dark .border-neutral-300,
+.dark .border-\[\#e9e7e4\],
+.dark .divide-slate-50 > :not(:last-child),
+.dark .divide-slate-100 > :not(:last-child),
+.dark .divide-gray-200 > :not(:last-child) {
+  border-color: var(--border) !important;
+}
+
+.dark input,
+.dark textarea,
+.dark select {
+  color-scheme: dark;
+}
+
+.dark header {
+  background-color: var(--card) !important;
+  border-color: var(--border) !important;
 }

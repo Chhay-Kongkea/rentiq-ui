@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { useGetMyAddressesQuery, useGetMyItemRequestsQuery, useGetMyNotificationPreferencesQuery, useGetMyProfileQuery, useGetMyReviewsQuery } from "@/redux/services/userApi";
 import {
   faPen,
   faCamera,
@@ -17,16 +18,40 @@ import {
   faIdCard,
 } from "@fortawesome/free-solid-svg-icons";
 
+function formatMemberSince(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat("en", { month: "long", year: "numeric" }).format(date);
+}
+
 export default function UserProfilePage() {
+  const { data: profile, isLoading, isError, refetch } = useGetMyProfileQuery();
+  const { data: addresses = [] } = useGetMyAddressesQuery();
+  const { data: reviews } = useGetMyReviewsQuery({ page: 0, size: 1 });
+  const { data: itemRequests } = useGetMyItemRequestsQuery({ pageNumber: 0, pageSize: 1 });
+  const { data: notificationPreferences } = useGetMyNotificationPreferencesQuery();
+  if (isLoading) {
+    return <main className="min-h-screen bg-[#f7f7f8] px-6 py-10 font-sans"><div className="mx-auto max-w-6xl animate-pulse space-y-6"><div className="h-10 w-52 rounded-lg bg-slate-200" /><div className="h-48 rounded-[20px] bg-white" /><div className="h-72 rounded-[20px] bg-white" /></div></main>;
+  }
+
+  if (isError || !profile) {
+    return <main className="flex min-h-[60vh] items-center justify-center bg-[#f7f7f8] px-6 font-sans"><div className="max-w-md rounded-[20px] bg-white p-8 text-center shadow-sm"><h1 className="text-xl font-bold text-slate-800">Unable to load your profile</h1><p className="mt-2 text-sm text-slate-500">Please check your session and try again.</p><button type="button" onClick={() => refetch()} className="mt-5 rounded-xl bg-[#F73030] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#F73030]/90">Try again</button></div></main>;
+  }
+
+  const fullName = [profile.firstName, profile.lastName].filter(Boolean).join(" ") || profile.username;
+  const initials = fullName.split(/\s+/).filter(Boolean).map((part) => part[0]).slice(0, 2).join("").toUpperCase();
+  const defaultAddress = addresses.find((address) => address.isDefault) ?? addresses[0];
+  const formattedAddress = defaultAddress ? [defaultAddress.addressLine, defaultAddress.city, defaultAddress.country].filter(Boolean).join(", ") : "No address added";
+
   return (
-    <main className="min-h-screen bg-[#f8fafc] px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
-      <div className="mx-auto max-w-7xl">
+    <main className="min-h-screen bg-[#f7f7f8] font-sans px-6 py-8 sm:px-12 lg:px-24 xl:px-32 2xl:px-40 lg:py-10">
+      <div className="mx-auto max-w-6xl">
         {/* Page Header */}
-        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="mb-7 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h1 className="text-3xl font-extrabold tracking-tight text-slate-800">
-              <span className="text-new-blue">My </span>
-              <span className="text-new-red">Profile</span>
+              <span className="text-[#253C95]">My </span>
+              <span className="text-[#F73030]">Profile</span>
             </h1>
             <p className="mt-1.5 text-sm text-slate-400">
               Manage your identity and account preferences.
@@ -34,7 +59,7 @@ export default function UserProfilePage() {
           </div>
           <Link
             href="/user/profile/edit-profile"
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-new-red px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-red-600"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#F73030] px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#F73030]/90"
           >
             <FontAwesomeIcon icon={faPen} className="h-3.5 w-3.5" />
             Edit Profile
@@ -46,14 +71,24 @@ export default function UserProfilePage() {
           {/* Main Content Area */}
           <div className="space-y-6 xl:col-span-8">
             {/* Profile Identity */}
-            <section className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
+            <section className="rounded-[20px] border border-slate-100 bg-white p-6 shadow-sm">
               <div className="flex flex-col items-center gap-6 sm:flex-row">
                 <div className="relative shrink-0">
-                  <img
-                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuAts-TvDX1eFNKPD6s2ln01L3lPuM8iGs5KUWgHHoT-G6L6QishiK89gmxQJFIjUDA4iqrlO8Blt5YLd62tlPJFWZtRYrR3zHdomPwZSJTiZnUNQCAJxDsgU4-Mxfz4LtjJwRBcpFIGMO_G0FRh6wV_StTPPfihBIPKogGl18HO62STNEsU7RBYAvf7o01vArzDwN-Mk7ch3zT5bsZRy5jNHX9_qjmfCrYgSHQ_xK-FdYzb-QjEiGuBJlgqwZMcPQ4HEoolzlN181Fo"
-                    alt="Profile"
-                    className="h-28 w-28 rounded-3xl object-cover sm:h-32 sm:w-32"
-                  />
+                  {profile.avatarUrl ? (
+                    <img
+                      src={profile.avatarUrl}
+                      alt={`${fullName} profile`}
+                      className="h-28 w-28 rounded-full border-4 border-white object-cover shadow-md sm:h-32 sm:w-32"
+                    />
+                  ) : (
+                    <div
+                      role="img"
+                      aria-label={`${fullName} profile initials`}
+                      className="flex h-28 w-28 items-center justify-center rounded-full border-4 border-white bg-rose-100 text-3xl font-bold uppercase text-[#F73030] shadow-md sm:h-32 sm:w-32"
+                    >
+                      {initials}
+                    </div>
+                  )}
                   <button className="absolute bottom-1 right-1 flex h-8 w-8 items-center justify-center rounded-full border border-slate-100 bg-white shadow-md hover:bg-slate-50">
                     <FontAwesomeIcon
                       icon={faCamera}
@@ -65,20 +100,20 @@ export default function UserProfilePage() {
                 <div className="min-w-0 flex-1 text-center sm:text-left">
                   <div className="mb-2.5 flex flex-wrap items-center justify-center gap-3 sm:justify-start">
                     <h2 className="text-2xl font-bold text-slate-800">
-                      Saroth Tola
+                      {fullName}
                     </h2>
                     <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-600">
                       <FontAwesomeIcon
                         icon={faCircleCheck}
                         className="h-3 w-3"
                       />
-                      Verified Account
+                      {profile.accountStatus}
                     </span>
                   </div>
                   <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-slate-400 sm:justify-start">
                     <span className="flex items-center gap-2">
                       <FontAwesomeIcon icon={faUser} className="h-3.5 w-3.5" />
-                      Renter Hub Member
+                      @{profile.username}
                     </span>
                     <span className="text-slate-300">|</span>
                     <span className="flex items-center gap-2">
@@ -86,7 +121,7 @@ export default function UserProfilePage() {
                         icon={faCalendarDays}
                         className="h-3.5 w-3.5"
                       />
-                      Joined June 2024
+                      Joined {formatMemberSince(profile.memberSince)}
                     </span>
                   </div>
                 </div>
@@ -94,7 +129,7 @@ export default function UserProfilePage() {
             </section>
 
             {/* Personal Information */}
-            <section className="rounded-2xl border border-slate-100 bg-white p-11 shadow-sm">
+            <section className="rounded-[20px] border border-slate-100 bg-white p-6 shadow-sm sm:p-8">
               <div className="mb-6 flex items-center gap-3">
                 <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-new-red-50 text-new-red">
                   <FontAwesomeIcon icon={faIdCard} className="h-4 w-4" />
@@ -117,16 +152,10 @@ export default function UserProfilePage() {
                         className="h-3.5 w-3.5 text-slate-400"
                       />
                       <span className="text-sm font-semibold text-slate-700">
-                        +855 96 888 777
+                        Not provided by API
                       </span>
                     </div>
-                    <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-500">
-                      <FontAwesomeIcon
-                        icon={faCircleCheck}
-                        className="h-3 w-3"
-                      />
-                      Verified
-                    </span>
+
                   </div>
                 </div>
 
@@ -142,7 +171,7 @@ export default function UserProfilePage() {
                         className="h-3.5 w-3.5 shrink-0 text-slate-400"
                       />
                       <span className="truncate text-sm font-semibold text-slate-700">
-                        saroth.tola@example.com
+                        {profile.email}
                       </span>
                     </div>
                     <span className="ml-2 inline-flex shrink-0 items-center gap-1 text-xs font-bold text-emerald-500">
@@ -187,7 +216,7 @@ export default function UserProfilePage() {
                       className="h-3.5 w-3.5 text-slate-400"
                     />
                     <span className="truncate text-sm font-semibold text-slate-700">
-                      Phnom Penh, Cambodia
+                      {formattedAddress}
                     </span>
                   </div>
                 </div>
@@ -198,7 +227,7 @@ export default function UserProfilePage() {
           {/* Sidebar */}
           <aside className="space-y-6 xl:col-span-4">
             {/* Trust Score */}
-            <section className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
+            <section className="rounded-[20px] border border-slate-100 bg-white p-6 shadow-sm">
               <div className="mb-4 flex items-center justify-between">
                 <h3 className="text-base font-bold text-slate-800">
                   Trust Score
@@ -254,11 +283,12 @@ export default function UserProfilePage() {
                   Your score is based on verification levels and community
                   feedback.
                 </p>
+                <p className="mt-2 text-center text-xs text-slate-400">Community reviews: {reviews?.totalElements ?? 0}</p>
               </div>
             </section>
 
             {/* Active Holds */}
-            <section className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
+            <section className="rounded-[20px] border border-slate-100 bg-white p-6 shadow-sm">
               <div className="mb-4 flex items-center justify-between">
                 <h3 className="text-base font-bold text-slate-800">
                   Active Holds
@@ -271,9 +301,9 @@ export default function UserProfilePage() {
 
               <div className="flex items-baseline gap-1.5">
                 <span className="text-3xl font-extrabold text-slate-800">
-                  2
+                  {itemRequests?.totalElements ?? 0}
                 </span>
-                <span className="text-xs text-slate-400">/ 3 Total Limit</span>
+                <span className="text-xs text-slate-400">total requests</span>
               </div>
 
               <div className="mt-4 flex gap-1.5">
@@ -284,7 +314,7 @@ export default function UserProfilePage() {
 
               <div className="mt-4 flex items-center justify-between">
                 <span className="text-xs font-bold text-emerald-500">
-                  Available: 1 hold
+                  Notification emails: {notificationPreferences?.emailNotifications ? "On" : "Off"}
                 </span>
                 <a
                   href="#"
@@ -301,7 +331,7 @@ export default function UserProfilePage() {
           </aside>
 
           {/* Full-Width Trust Center Section */}
-          <section className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm xl:col-span-12">
+          <section className="rounded-[20px] border border-slate-100 bg-white p-6 shadow-sm xl:col-span-12">
             <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
               {/* Header Info */}
               <div className="flex items-center gap-4">
