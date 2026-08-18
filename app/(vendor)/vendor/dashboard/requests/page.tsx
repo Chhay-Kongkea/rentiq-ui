@@ -1,448 +1,258 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import dynamic from "next/dynamic";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import "leaflet/dist/leaflet.css";
+import { FormEvent, useMemo, useState } from "react";
+import { useGetCategoriesQuery } from "@/redux/services/categoryApi";
 import {
-  faList,
-  faMapLocationDot,
-  faCar,
-  faCamera,
-  faMotorcycle,
-  faWrench,
-  faCheckCircle,
-  faArrowDownWideShort,
-  faChevronDown,
-} from "@fortawesome/free-solid-svg-icons";
+  useCreateVendorOfferMutation,
+  useGetMyVendorItemsQuery,
+  useGetMyVendorOffersQuery,
+  useGetOpenItemRequestsForVendorQuery,
+  useUpdateVendorOfferMutation,
+  useWithdrawVendorOfferMutation,
+} from "@/redux/services/vendorApi";
+import type { ItemRequestResponse, OfferResponse } from "@/lib/types/vendor.types";
 
-// Dynamically import Leaflet components to prevent SSR errors in Next.js
-const MapContainer = dynamic(
-  () => import("react-leaflet").then((m) => m.MapContainer),
-  { ssr: false }
-);
-const TileLayer = dynamic(
-  () => import("react-leaflet").then((m) => m.TileLayer),
-  { ssr: false }
-);
-const Marker = dynamic(
-  () => import("react-leaflet").then((m) => m.Marker),
-  { ssr: false }
-);
-const Popup = dynamic(
-  () => import("react-leaflet").then((m) => m.Popup),
-  { ssr: false }
-);
+function money(value?: number, currency = "USD") {
+  return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(value ?? 0);
+}
 
-// ---------------- CATEGORIES ----------------
-const CATEGORIES = [
-  { id: "all", label: "All", icon: null },
-  { id: "cars", label: "Cars", icon: faCar },
-  { id: "electronics", label: "Electronics", icon: faCamera },
-  { id: "motorbikes", label: "Motorbikes", icon: faMotorcycle },
-  { id: "tools", label: "Tools", icon: faWrench },
-];
+function apiMessage(error: unknown, fallback: string) {
+  if (typeof error === "object" && error && "data" in error) {
+    const data = (error as { data?: { message?: string } }).data;
+    if (data?.message) return data.message;
+  }
+  return fallback;
+}
 
-// ---------------- ALL REQUESTS (PHNOM PENH DATA) ----------------
-const PHNOM_PENH_REQUESTS = [
-  {
-    id: 1,
-    name: "Sarah Jenkins",
-    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80",
-    locationName: "Tuol Kouk, Phnom Penh",
-    distance: "2.4 miles away",
-    statusBadge: "LIVE",
-    badgeColor: "bg-red-500 text-white",
-    category: "cars",
-    lookingFor: "Tesla Model 3",
-    note: '"Need a clean EV for a weekend trip to Siem Reap. Reliable driver with 5-star rating..."',
-    duration: "3 Days (July 15 - 18)",
-    budget: "$85",
-    rating: "4.9",
-    rentals: "8 rentals",
-    lat: 11.5682,
-    lng: 104.8921,
-  },
-  {
-    id: 2,
-    name: "David Rodriguez",
-    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80",
-    locationName: "Chroy Changvar, Phnom Penh",
-    distance: "0.8 miles away",
-    statusBadge: "NEW",
-    badgeColor: "bg-blue-100 text-blue-600",
-    category: "electronics",
-    lookingFor: "Sony A7IV",
-    note: '"Filming a small wedding this Saturday near the Mekong. Need the body + a 35mm lens if possible."',
-    duration: "1 Day (July 12)",
-    budget: "$120",
-    rating: "5.0",
-    rentals: "15 rentals",
-    lat: 11.5891,
-    lng: 104.9352,
-  },
-  {
-    id: 3,
-    name: "Sokha Mean",
-    avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&auto=format&fit=crop&q=80",
-    locationName: "Boeung Keng Kang 1 (BKK1)",
-    distance: "1.2 miles away",
-    statusBadge: "LIVE",
-    badgeColor: "bg-red-500 text-white",
-    category: "motorbikes",
-    lookingFor: "Honda Dream 125",
-    note: '"Need a reliable motorbike for daily commuting around Chamkarmon area."',
-    duration: "3 Days",
-    budget: "$35",
-    rating: "4.8",
-    rentals: "12 rentals",
-    lat: 11.5489,
-    lng: 104.9282,
-  },
-  {
-    id: 4,
-    name: "Vannak Chan",
-    avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=80",
-    locationName: "Daun Penh, Phnom Penh",
-    distance: "3.5 miles away",
-    statusBadge: "NEW",
-    badgeColor: "bg-blue-100 text-blue-600",
-    category: "electronics",
-    lookingFor: "Sony A7IV",
-    note: '"Filming project near Wat Phnom. Need extra camera body for 24 hours."',
-    duration: "24 Hours",
-    budget: "$45",
-    rating: "5.0",
-    rentals: "4 rentals",
-    lat: 11.5762,
-    lng: 104.9231,
-  },
-  {
-    id: 5,
-    name: "Emma Wilson",
-    avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80",
-    locationName: "Chamkarmon, Phnom Penh",
-    distance: "4.1 miles away",
-    statusBadge: "LIVE",
-    badgeColor: "bg-red-500 text-white",
-    category: "tools",
-    lookingFor: "Heavy Duty Drill",
-    note: '"DIY project at home. Need something powerful for concrete walls."',
-    duration: "2 Days (July 14 - 15)",
-    budget: "$35",
-    rating: "4.7",
-    rentals: "6 rentals",
-    lat: 11.5392,
-    lng: 104.9211,
-  },
-];
+export default function VendorRequestsPage() {
+  const [keyword, setKeyword] = useState("");
+  const [categoryId, setCategoryId] = useState<number | undefined>();
+  const [selectedRequest, setSelectedRequest] = useState<ItemRequestResponse | null>(null);
+  const [editingOffer, setEditingOffer] = useState<OfferResponse | null>(null);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
-export default function NearbyRequestsPage() {
-  const [viewMode, setViewMode] = useState<"list" | "map">("map");
-  const [selectedCategory, setSelectedCategory] = useState("all");
-  const [requests, setRequests] = useState(PHNOM_PENH_REQUESTS);
-  const [activeMapItem, setActiveMapItem] = useState<number | null>(3);
-  const [isClient, setIsClient] = useState(false);
+  const { data: categories = [] } = useGetCategoriesQuery();
+  const { data: requestPage, isLoading: requestsLoading } = useGetOpenItemRequestsForVendorQuery({
+    keyword: keyword.trim() || undefined,
+    categoryId,
+    status: "OPEN",
+    pageNumber: 0,
+    pageSize: 30,
+    sortBy: "createdAt",
+    sortDirection: "desc",
+  });
+  const { data: itemPage } = useGetMyVendorItemsQuery({ pageSize: 100 });
+  const { data: offersPage, isLoading: offersLoading } = useGetMyVendorOffersQuery({ pageSize: 100 });
+  const [createOffer, createState] = useCreateVendorOfferMutation();
+  const [updateOffer, updateState] = useUpdateVendorOfferMutation();
+  const [withdrawOffer, withdrawState] = useWithdrawVendorOfferMutation();
 
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
+  const requests = requestPage?.content ?? [];
+  const myItems = itemPage?.content ?? [];
+  const myOffers = offersPage?.content ?? [];
+  const offerByRequest = useMemo(() => new Map(myOffers.map((offer) => [offer.requestId, offer])), [myOffers]);
 
-  // Custom Price Pin Marker Icon (Safely created on Client-Side)
-  const createCustomIcon = (price: string, isActive: boolean) => {
-    if (!isClient) return undefined;
-    const L = require("leaflet");
-    return L.divIcon({
-      className: "custom-map-pin",
-      html: `
-        <div style="
-          background-color: ${isActive ? "#ff3b30" : "#ffffff"};
-          color: ${isActive ? "#ffffff" : "#0f172a"};
-          font-weight: 800;
-          font-size: 11px;
-          padding: 4px 8px;
-          border-radius: 8px;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.18);
-          border: 1px solid ${isActive ? "#ff3b30" : "#cbd5e1"};
-          text-align: center;
-          white-space: nowrap;
-          transition: all 0.2s ease;
-        ">
-          ${price}/day
-        </div>
-      `,
-      iconSize: [60, 30],
-      iconAnchor: [30, 15],
-    });
-  };
+  async function submitOffer(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError("");
+    setSuccess("");
+    const form = new FormData(event.currentTarget);
+    const offeredPrice = Number(form.get("offeredPrice"));
+    const itemId = String(form.get("itemId") || "").trim() || undefined;
+    const currency = String(form.get("currency") || "USD").trim().toUpperCase();
+    const message = String(form.get("message") || "").trim() || undefined;
 
-  const filteredRequests = requests.filter((req) =>
-    selectedCategory === "all" ? true : req.category === selectedCategory
-  );
+    if (!Number.isFinite(offeredPrice) || offeredPrice <= 0) {
+      setError("Offer price must be greater than 0.");
+      return;
+    }
 
-  const handleSendOffer = (name: string) => {
-    alert(`Offer form opened for ${name}`);
-  };
+    try {
+      if (editingOffer) {
+        await updateOffer({ offerId: editingOffer.id, body: { itemId, offeredPrice, currency, message } }).unwrap();
+        setSuccess("Offer updated successfully.");
+      } else if (selectedRequest) {
+        await createOffer({ requestId: selectedRequest.id, body: { itemId, offeredPrice, currency, message } }).unwrap();
+        setSuccess("Offer submitted successfully.");
+      }
+      setSelectedRequest(null);
+      setEditingOffer(null);
+    } catch (requestError) {
+      setError(apiMessage(requestError, "Unable to save offer."));
+    }
+  }
 
-  const handleIgnore = (id: number) => {
-    setRequests((prev) => prev.filter((r) => r.id !== id));
-  };
+  async function handleWithdraw(offerId: string) {
+    if (!window.confirm("Withdraw this offer?")) return;
+    setError("");
+    setSuccess("");
+    try {
+      await withdrawOffer(offerId).unwrap();
+      setSuccess("Offer withdrawn.");
+    } catch (requestError) {
+      setError(apiMessage(requestError, "Unable to withdraw offer."));
+    }
+  }
+
+  const activeFormOffer = editingOffer;
+  const formRequest = selectedRequest ?? requests.find((request) => request.id === editingOffer?.requestId) ?? null;
 
   return (
-    <div className="mx-auto max-w-[1400px] px-4 py-4 sm:px-6 sm:py-6 space-y-6 text-slate-800">
-      
-      {/* ---------------- 1. PAGE HEADER & TOGGLE ---------------- */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900">Nearby Requests</h1>
-          <p className="mt-0.5 text-xs text-slate-500">
-            Connect with renters looking for items in Phnom Penh, Cambodia.
-          </p>
-        </div>
-
-        {/* List / Map Switcher */}
-        <div className="flex items-center rounded-xl bg-slate-200/60 p-1 self-start sm:self-auto shrink-0">
-          <button
-            onClick={() => setViewMode("list")}
-            className={`flex items-center gap-2 rounded-lg px-4 py-1.5 text-xs font-bold transition ${
-              viewMode === "list"
-                ? "bg-white text-slate-900 shadow-sm"
-                : "text-slate-500 hover:text-slate-800"
-            }`}
-          >
-            <FontAwesomeIcon icon={faList} className="h-3.5 w-3.5" />
-            List
-          </button>
-          <button
-            onClick={() => setViewMode("map")}
-            className={`flex items-center gap-2 rounded-lg px-4 py-1.5 text-xs font-bold transition ${
-              viewMode === "map"
-                ? "bg-white text-slate-900 shadow-sm"
-                : "text-slate-500 hover:text-slate-800"
-            }`}
-          >
-            <FontAwesomeIcon icon={faMapLocationDot} className="h-3.5 w-3.5" />
-            Map
-          </button>
-        </div>
+    <div className="mx-auto max-w-[1400px] space-y-6">
+      <div>
+        <p className="text-sm font-semibold text-[#F73030]">Marketplace demand</p>
+        <h1 className="text-3xl font-bold tracking-tight text-slate-950">Requests & Offers</h1>
+        <p className="mt-1 text-sm text-slate-500">Browse open renter requests and manage the offers you send.</p>
       </div>
 
-      {/* ---------------- 2. CATEGORY FILTERS & SORT ---------------- */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-          {CATEGORIES.map((cat) => (
-            <button
-              key={cat.id}
-              onClick={() => setSelectedCategory(cat.id)}
-              className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold transition ${
-                selectedCategory === cat.id
-                  ? "bg-[#ff3b30] text-white shadow-sm"
-                  : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200/60"
-              }`}
-            >
-              {cat.icon && <FontAwesomeIcon icon={cat.icon} className="h-3 w-3" />}
-              {cat.label}
-            </button>
-          ))}
+      {error ? <div className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</div> : null}
+      {success ? <div className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-700">{success}</div> : null}
+
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="grid gap-3 md:grid-cols-[1fr_240px]">
+          <input
+            value={keyword}
+            onChange={(event) => setKeyword(event.target.value)}
+            placeholder="Search requests..."
+            className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-[#253C95]"
+          />
+          <select
+            value={categoryId ?? ""}
+            onChange={(event) => setCategoryId(event.target.value ? Number(event.target.value) : undefined)}
+            className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-[#253C95]"
+          >
+            <option value="">All categories</option>
+            {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
+          </select>
         </div>
+      </section>
 
-        <button className="flex items-center gap-2 text-xs font-bold text-slate-600 hover:text-slate-900 self-end sm:self-auto">
-          <FontAwesomeIcon icon={faArrowDownWideShort} className="h-3.5 w-3.5 text-slate-400" />
-          <span>Sort by: <strong className="text-slate-900">Newest First</strong></span>
-        </button>
-      </div>
-
-      {/* ---------------- 3. VIEW MODE CONTENT ---------------- */}
-      {viewMode === "list" ? (
-        
-        /* ================= LIST VIEW ================= */
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
-            {filteredRequests.map((req) => (
-              <div
-                key={req.id}
-                className="relative flex flex-col justify-between rounded-2xl border border-slate-100 bg-white p-4 sm:p-5 shadow-sm transition hover:shadow-md"
-              >
-                <div>
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-3">
-                      <img
-                        src={req.avatar}
-                        alt={req.name}
-                        className="h-10 w-10 rounded-full object-cover shrink-0"
-                      />
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <h3 className="text-xs font-extrabold text-slate-900 truncate">{req.name}</h3>
-                          <FontAwesomeIcon icon={faCheckCircle} className="h-3.5 w-3.5 text-blue-500 shrink-0" />
-                        </div>
-                        <p className="text-[11px] text-slate-400 truncate">{req.locationName}</p>
-                      </div>
-                    </div>
-
-                    <span className={`rounded-full px-2.5 py-0.5 text-[9px] font-extrabold uppercase shrink-0 ${req.badgeColor}`}>
-                      {req.statusBadge}
-                    </span>
-                  </div>
-
-                  <div className="mt-4 rounded-xl bg-slate-50 p-3">
-                    <p className="text-xs font-bold text-[#ff3b30]">
-                      Looking for: {req.lookingFor}
-                    </p>
-                    <p className="mt-1.5 text-[11px] italic text-slate-500 leading-relaxed line-clamp-3">
-                      {req.note}
-                    </p>
-                  </div>
-
-                  <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3 text-xs">
-                    <div>
-                      <p className="text-[10px] font-bold uppercase text-slate-400">Duration</p>
-                      <p className="font-bold text-slate-800">{req.duration}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-[10px] font-bold uppercase text-slate-400">Budget</p>
-                      <p className="text-sm font-extrabold text-[#ff3b30]">
-                        {req.budget}<span className="text-[10px] font-semibold text-slate-400">/day</span>
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-5 flex items-center gap-2">
-                  <button
-                    onClick={() => handleSendOffer(req.name)}
-                    className="flex-1 rounded-xl bg-[#ff3b30] py-2.5 text-xs font-bold text-white transition hover:bg-red-600 active:scale-95"
-                  >
-                    Send Offer
-                  </button>
-                  <button
-                    onClick={() => handleIgnore(req.id)}
-                    className="rounded-xl border border-slate-200 px-4 py-2.5 text-xs font-bold text-slate-600 transition hover:bg-slate-100 active:scale-95"
-                  >
-                    Ignore
-                  </button>
-                </div>
-              </div>
-            ))}
+      <div className="grid gap-5 xl:grid-cols-[1fr_420px]">
+        <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="border-b border-slate-100 px-5 py-4">
+            <h2 className="font-bold text-slate-950">Open requests</h2>
+            <p className="text-xs text-slate-500">{requestPage?.totalElements ?? requests.length} matching requests</p>
           </div>
 
-          <div className="flex justify-center pt-2">
-            <button className="flex items-center gap-2 rounded-2xl border border-blue-500/30 bg-white px-6 py-2.5 text-xs font-bold text-blue-600 shadow-sm transition hover:bg-blue-50/50">
-              <span>Load More Nearby Requests</span>
-              <FontAwesomeIcon icon={faChevronDown} className="h-3 w-3" />
-            </button>
-          </div>
-        </div>
-
-      ) : (
-
-        /* ================= MAP VIEW ================= */
-        <div className="flex flex-col-reverse lg:grid lg:grid-cols-12 gap-5 min-h-[550px]">
-          
-          {/* Requests Sidebar */}
-          <div className="space-y-3 lg:col-span-4 max-h-[500px] lg:max-h-[600px] overflow-y-auto pr-1">
-            <div className="flex items-center justify-between mb-1">
-              <div>
-                <h3 className="text-xs font-bold text-slate-900">Nearby Requests</h3>
-                <p className="text-[10px] text-slate-400">Available requests in Phnom Penh</p>
-              </div>
-              <span className="rounded-md bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[9px] font-extrabold text-emerald-600">
-                {filteredRequests.length} ACTIVE
-              </span>
-            </div>
-
-            {filteredRequests.map((req) => {
-              const isActive = activeMapItem === req.id;
+          {requestsLoading ? <p className="p-6 text-sm text-slate-500">Loading requests...</p> : null}
+          <div className="divide-y divide-slate-100">
+            {requests.map((request) => {
+              const existingOffer = offerByRequest.get(request.id);
               return (
-                <div
-                  key={req.id}
-                  onClick={() => setActiveMapItem(req.id)}
-                  className={`cursor-pointer rounded-2xl border p-4 transition ${
-                    isActive
-                      ? "border-red-500 bg-red-50/20 shadow-sm"
-                      : "border-slate-100 bg-white hover:border-slate-300"
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <img src={req.avatar} alt={req.name} className="h-8 w-8 rounded-full object-cover shrink-0" />
-                      <div className="min-w-0">
-                        <h4 className="text-xs font-bold text-slate-900 truncate">{req.name}</h4>
-                        <p className="text-[10px] text-slate-400">
-                          ★ {req.rating} · {req.rentals}
-                        </p>
+                <article key={request.id} className="p-5">
+                  <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="font-bold text-slate-950">{request.title || "Untitled request"}</h3>
+                        <span className="rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-700">{request.status || "OPEN"}</span>
+                      </div>
+                      <p className="mt-2 text-sm leading-6 text-slate-600">{request.description || "No description provided."}</p>
+                      <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-xs text-slate-500">
+                        <span>Budget: {money(request.budgetMin)} – {money(request.budgetMax)}</span>
+                        <span>Needed: {request.neededFrom || "?"} → {request.neededTo || "?"}</span>
+                        <span>{request.offerCount ?? 0} offers</span>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="mt-3 text-xs space-y-1">
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">Equipment</span>
-                      <span className="font-bold text-slate-800">{req.lookingFor}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">Duration</span>
-                      <span className="font-semibold text-slate-700">{req.duration}</span>
-                    </div>
+                    {existingOffer ? (
+                      <div className="flex shrink-0 items-center gap-2">
+                        <button
+                          onClick={() => { setEditingOffer(existingOffer); setSelectedRequest(null); }}
+                          disabled={existingOffer.status !== "PENDING"}
+                          className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 disabled:opacity-40"
+                        >
+                          Edit
+                        </button>
+                        <span className="rounded-lg bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700">{existingOffer.status}</span>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => { setSelectedRequest(request); setEditingOffer(null); }}
+                        className="shrink-0 rounded-lg bg-[#F73030] px-4 py-2.5 text-xs font-bold text-white"
+                      >
+                        Make offer
+                      </button>
+                    )}
                   </div>
-
-                  <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-2.5">
-                    <span className="text-sm font-extrabold text-[#ff3b30]">{req.budget}<span className="text-[10px] font-normal text-slate-400">/day</span></span>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleSendOffer(req.name);
-                      }}
-                      className="rounded-lg bg-[#ff3b30] px-4 py-1.5 text-xs font-bold text-white hover:bg-red-600 active:scale-95"
-                    >
-                      Accept
-                    </button>
-                  </div>
-                </div>
+                </article>
               );
             })}
+            {!requestsLoading && !requests.length ? <p className="p-8 text-center text-sm text-slate-500">No open requests found.</p> : null}
           </div>
+        </section>
 
-          {/* Leaflet Map Area */}
-          <div className="relative min-h-[350px] sm:min-h-[450px] lg:min-h-[600px] overflow-hidden rounded-2xl border border-slate-200 lg:col-span-8 shadow-sm">
-            {isClient && (
-              <MapContainer
-                center={[11.5564, 104.9282]}
-                zoom={13}
-                scrollWheelZoom={true}
-                className="h-full w-full min-h-[350px] sm:min-h-[450px] lg:min-h-[600px]"
-              >
-                <TileLayer
-                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                />
+        <div className="space-y-5">
+          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <h2 className="font-bold text-slate-950">{activeFormOffer ? "Edit offer" : "Create offer"}</h2>
+            <p className="mt-1 text-xs text-slate-500">
+              {formRequest ? `For: ${formRequest.title || formRequest.id}` : "Choose an open request to create an offer."}
+            </p>
 
-                {filteredRequests.map((req) => (
-                  <Marker
-                    key={req.id}
-                    position={[req.lat, req.lng]}
-                    icon={createCustomIcon(req.budget, activeMapItem === req.id)}
-                    eventHandlers={{
-                      click: () => setActiveMapItem(req.id),
-                    }}
-                  >
-                    <Popup>
-                      <div className="text-xs space-y-1 p-1">
-                        <p className="font-bold text-slate-900">{req.name}</p>
-                        <p className="text-slate-500">{req.lookingFor}</p>
-                        <p className="text-[11px] text-slate-400">{req.locationName}</p>
-                        <p className="font-bold text-[#ff3b30]">{req.budget}/day</p>
-                      </div>
-                    </Popup>
-                  </Marker>
-                ))}
-              </MapContainer>
-            )}
-          </div>
+            {formRequest || activeFormOffer ? (
+              <form key={activeFormOffer?.id || formRequest?.id} onSubmit={submitOffer} className="mt-4 space-y-4">
+                <label className="block text-sm font-semibold text-slate-700">
+                  Your listing
+                  <select name="itemId" defaultValue={activeFormOffer?.itemId || ""} className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2.5 font-normal">
+                    <option value="">No linked listing</option>
+                    {myItems.map((item) => <option key={item.id} value={item.id}>{item.title || item.id}</option>)}
+                  </select>
+                </label>
+                <div className="grid grid-cols-[1fr_100px] gap-3">
+                  <label className="text-sm font-semibold text-slate-700">
+                    Offer price
+                    <input name="offeredPrice" type="number" min="0.01" step="0.01" required defaultValue={activeFormOffer?.offeredPrice ?? ""} className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2.5 font-normal" />
+                  </label>
+                  <label className="text-sm font-semibold text-slate-700">
+                    Currency
+                    <input name="currency" maxLength={3} defaultValue={activeFormOffer?.currency || "USD"} className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2.5 font-normal uppercase" />
+                  </label>
+                </div>
+                <label className="block text-sm font-semibold text-slate-700">
+                  Message
+                  <textarea name="message" rows={4} defaultValue={activeFormOffer?.message || ""} className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2.5 font-normal" />
+                </label>
+                <div className="flex gap-2">
+                  <button disabled={createState.isLoading || updateState.isLoading} className="rounded-lg bg-[#253C95] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60">
+                    {createState.isLoading || updateState.isLoading ? "Saving..." : activeFormOffer ? "Update offer" : "Send offer"}
+                  </button>
+                  <button type="button" onClick={() => { setSelectedRequest(null); setEditingOffer(null); }} className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700">Cancel</button>
+                </div>
+              </form>
+            ) : null}
+          </section>
 
+          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex items-center justify-between">
+              <h2 className="font-bold text-slate-950">My offers</h2>
+              <span className="text-xs text-slate-500">{offersPage?.totalElements ?? myOffers.length}</span>
+            </div>
+            {offersLoading ? <p className="mt-4 text-sm text-slate-500">Loading offers...</p> : null}
+            <div className="mt-3 divide-y divide-slate-100">
+              {myOffers.slice(0, 10).map((offer) => (
+                <div key={offer.id} className="py-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-slate-900">{offer.itemTitle || `Request ${offer.requestId.slice(0, 8)}`}</p>
+                      <p className="text-xs text-slate-500">{money(offer.offeredPrice, offer.currency || "USD")} · {offer.status}</p>
+                    </div>
+                    {offer.status === "PENDING" ? (
+                      <button
+                        onClick={() => handleWithdraw(offer.id)}
+                        disabled={withdrawState.isLoading}
+                        className="text-xs font-semibold text-red-600 disabled:opacity-50"
+                      >
+                        Withdraw
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+              ))}
+              {!offersLoading && !myOffers.length ? <p className="py-5 text-center text-sm text-slate-500">No offers yet.</p> : null}
+            </div>
+          </section>
         </div>
-      )}
-
+      </div>
     </div>
   );
 }

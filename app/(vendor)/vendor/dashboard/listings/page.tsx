@@ -1,527 +1,343 @@
 "use client";
-import React, { useState } from 'react';
-import { 
-  Filter, 
-  Plus, 
-  Pencil, 
-  MoreVertical, 
-  ArrowLeft, 
-  UploadCloud, 
-  Info, 
-  Image as ImageIcon,
-  DollarSign
-} from 'lucide-react';
 
-// Mock Data for Inventory Items
-const initialInventory = [
-  {
-    id: '1',
-    name: 'Sony A7 IV Body',
-    sn: 'SN: 49201-BXC',
-    specs: '33MP Full-Frame',
-    dailyRate: 120,
-    securityDeposit: 500,
-    status: 'ACTIVE',
-    available: true,
-    image: 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=150&auto=format&fit=crop&q=80',
-  },
-  {
-    id: '2',
-    name: 'RED V-Raptor 8K VV',
-    sn: 'SN: 88102-VR',
-    specs: '8K VV Cinema Camera',
-    dailyRate: 450,
-    securityDeposit: 2500,
-    status: 'ACTIVE',
-    available: true,
-    image: 'https://images.unsplash.com/photo-1585842378054-ee2e52f94ba2?w=150&auto=format&fit=crop&q=80',
-  },
-  {
-    id: '3',
-    name: 'Canon C300 Mark III',
-    sn: 'SN: 10293-C3',
-    specs: '4K Super 35 Cinema',
-    dailyRate: 210,
-    securityDeposit: 1200,
-    status: 'ACTIVE',
-    available: false,
-    image: 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=150&auto=format&fit=crop&q=80',
-  },
-  {
-    id: '4',
-    name: 'ARRI Alexa Mini LF',
-    sn: 'SN: 99201-AR',
-    specs: 'Large Format Cinema',
-    dailyRate: 850,
-    securityDeposit: 5000,
-    status: 'ACTIVE',
-    available: true,
-    image: 'https://images.unsplash.com/photo-1502920917128-1aa500764cbd?w=150&auto=format&fit=crop&q=80',
-  },
-];
+import { FormEvent, useState } from "react";
+import { useGetCategoriesQuery } from "@/redux/services/categoryApi";
+import type { VendorItem } from "@/lib/types/vendor.types";
+import {
+  useCreateVendorItemAvailabilityBlockMutation,
+  useCreateVendorItemMutation,
+  useDeleteVendorItemAvailabilityBlockMutation,
+  useDeleteVendorItemImageMutation,
+  useDeleteVendorItemMutation,
+  useGetMyVendorItemsQuery,
+  useGetVendorItemAvailabilityBlocksQuery,
+  useGetVendorItemImagesQuery,
+  useUpdateVendorItemAvailabilityMutation,
+  useUpdateVendorItemImageMutation,
+  useUpdateVendorItemMutation,
+  useUpdateVendorItemStatusMutation,
+  useUploadVendorItemImagesMutation,
+} from "@/redux/services/vendorApi";
 
-export default function InventoryManagement() {
-  const [view, setView] = useState('list'); // 'list' or 'form'
-  const [inventory, setInventory] = useState(initialInventory);
+function apiMessage(error: unknown, fallback: string) {
+  if (typeof error === "object" && error && "data" in error) {
+    const data = (error as { data?: { message?: string } }).data;
+    if (data?.message) return data.message;
+  }
+  return fallback;
+}
 
-  // New Listing Form State
-  const [formData, setFormData] = useState({
-    title: 'Sony FX6 Full-Frame Cinema Camera Kit',
-    category: 'Cinema Cameras',
-    brand: 'Sony',
-    model: 'ILME-FX6V',
-    serialNumber: 'S01-449202-K',
-    dailyRate: 250,
-    securityDeposit: 1500,
-    coiRequired: true,
-    cleaningFeeIncluded: false,
-    availableForShipping: true,
-  });
+function money(value?: number) {
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(value ?? 0);
+}
 
-  // Toggle item availability in the table view
-  const toggleAvailability = (id) => {
-    setInventory(prev =>
-      prev.map(item =>
-        item.id === id ? { ...item, available: !item.available } : item
-      )
-    );
-  };
+export default function VendorListingsPage() {
+  const [editing, setEditing] = useState<VendorItem | null>(null);
+  const [showForm, setShowForm] = useState(false);
+  const [manageItem, setManageItem] = useState<VendorItem | null>(null);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
-  // Handle Form Submit
-  const handleSaveListing = (e) => {
-    e.preventDefault();
-    const newItem = {
-      id: Date.now().toString(),
-      name: formData.title,
-      sn: `SN: ${formData.serialNumber}`,
-      specs: `${formData.brand} ${formData.model}`,
-      dailyRate: Number(formData.dailyRate),
-      securityDeposit: Number(formData.securityDeposit),
-      status: 'ACTIVE',
-      available: true,
-      image: 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=150&auto=format&fit=crop&q=80',
+  const { data: categories = [] } = useGetCategoriesQuery();
+  const { data: itemPage, isLoading } = useGetMyVendorItemsQuery({ pageSize: 100 });
+  const items = itemPage?.content ?? [];
+
+  const [createItem, createState] = useCreateVendorItemMutation();
+  const [updateItem, updateState] = useUpdateVendorItemMutation();
+  const [deleteItem, deleteState] = useDeleteVendorItemMutation();
+  const [updateStatus, statusState] = useUpdateVendorItemStatusMutation();
+  const [updateAvailability, availabilityState] = useUpdateVendorItemAvailabilityMutation();
+
+  const manageId = manageItem?.id ?? "";
+  const { data: images = [], isLoading: imagesLoading } = useGetVendorItemImagesQuery(manageId, { skip: !manageItem });
+  const { data: blocks = [], isLoading: blocksLoading } = useGetVendorItemAvailabilityBlocksQuery(manageId, { skip: !manageItem });
+  const [uploadImages, uploadState] = useUploadVendorItemImagesMutation();
+  const [updateImage, updateImageState] = useUpdateVendorItemImageMutation();
+  const [deleteImage, deleteImageState] = useDeleteVendorItemImageMutation();
+  const [createBlock, createBlockState] = useCreateVendorItemAvailabilityBlockMutation();
+  const [deleteBlock, deleteBlockState] = useDeleteVendorItemAvailabilityBlockMutation();
+
+  function resetMessages() {
+    setError("");
+    setSuccess("");
+  }
+
+  function openCreate() {
+    resetMessages();
+    setEditing(null);
+    setShowForm(true);
+  }
+
+  function openEdit(item: VendorItem) {
+    resetMessages();
+    setEditing(item);
+    setShowForm(true);
+  }
+
+  async function saveItem(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    resetMessages();
+    const form = new FormData(event.currentTarget);
+    const categoryId = Number(form.get("categoryId"));
+    const pricePerDay = Number(form.get("pricePerDay"));
+    const depositAmountRaw = String(form.get("depositAmount") || "").trim();
+    const latitude = Number(form.get("latitude"));
+    const longitude = Number(form.get("longitude"));
+    const specificationsText = String(form.get("specifications") || "").trim();
+
+    let specifications: Record<string, unknown> | undefined;
+    if (specificationsText) {
+      try {
+        specifications = JSON.parse(specificationsText) as Record<string, unknown>;
+      } catch {
+        setError("Specifications must be valid JSON, for example {\"brand\":\"Sony\"}.");
+        return;
+      }
+    }
+
+    if (!Number.isInteger(categoryId) || categoryId <= 0 || !Number.isFinite(pricePerDay) || pricePerDay <= 0 || !Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+      setError("Category, daily price, latitude, and longitude are required.");
+      return;
+    }
+
+    const body = {
+      categoryId,
+      title: String(form.get("title") || "").trim(),
+      description: String(form.get("description") || "").trim() || undefined,
+      condition: String(form.get("condition") || "GOOD") as "NEW" | "LIKE_NEW" | "GOOD" | "FAIR" | "POOR",
+      specifications,
+      locationText: String(form.get("locationText") || "").trim(),
+      latitude,
+      longitude,
+      pricePerDay,
+      depositAmount: depositAmountRaw ? Number(depositAmountRaw) : undefined,
     };
-    setInventory([newItem, ...inventory]);
-    setView('list');
-  };
+
+    try {
+      if (editing) {
+        await updateItem({ itemId: editing.id, body }).unwrap();
+        setSuccess("Listing updated successfully.");
+      } else {
+        const created = await createItem(body).unwrap();
+        setSuccess("Listing created. You can now upload images and manage availability.");
+        setManageItem(created);
+      }
+      setShowForm(false);
+      setEditing(null);
+    } catch (requestError) {
+      setError(apiMessage(requestError, "Unable to save listing."));
+    }
+  }
+
+  async function handleDelete(item: VendorItem) {
+    if (!window.confirm(`Delete “${item.title || "this listing"}”?`)) return;
+    resetMessages();
+    try {
+      await deleteItem(item.id).unwrap();
+      if (manageItem?.id === item.id) setManageItem(null);
+      setSuccess("Listing deleted.");
+    } catch (requestError) {
+      setError(apiMessage(requestError, "Unable to delete listing."));
+    }
+  }
+
+  async function toggleStatus(item: VendorItem) {
+    resetMessages();
+    const next = item.status === "ACTIVE" ? "HIDDEN" : "ACTIVE";
+    try {
+      await updateStatus({ itemId: item.id, body: { status: next } }).unwrap();
+      setSuccess(`Listing status changed to ${next}.`);
+    } catch (requestError) {
+      setError(apiMessage(requestError, "Unable to update listing status."));
+    }
+  }
+
+  async function setAvailability(itemId: string, availability: "AVAILABLE" | "UNAVAILABLE" | "HIDDEN") {
+    resetMessages();
+    try {
+      await updateAvailability({ itemId, body: { availability } }).unwrap();
+      setSuccess(`Availability updated to ${availability}.`);
+    } catch (requestError) {
+      setError(apiMessage(requestError, "Unable to update availability."));
+    }
+  }
+
+  async function handleImageUpload(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!manageItem) return;
+    resetMessages();
+    const form = new FormData(event.currentTarget);
+    const files = form.getAll("files").filter((value): value is File => value instanceof File && value.size > 0);
+    if (!files.length) {
+      setError("Choose at least one image.");
+      return;
+    }
+    try {
+      await uploadImages({ itemId: manageItem.id, files }).unwrap();
+      event.currentTarget.reset();
+      setSuccess("Images uploaded.");
+    } catch (requestError) {
+      setError(apiMessage(requestError, "Unable to upload images."));
+    }
+  }
+
+  async function makePrimary(imageId: string) {
+    if (!manageItem) return;
+    resetMessages();
+    try {
+      await updateImage({ itemId: manageItem.id, imageId, body: { primary: true } }).unwrap();
+      setSuccess("Primary image updated.");
+    } catch (requestError) {
+      setError(apiMessage(requestError, "Unable to update image."));
+    }
+  }
+
+  async function removeImage(imageId: string) {
+    if (!manageItem || !window.confirm("Delete this image?")) return;
+    resetMessages();
+    try {
+      await deleteImage({ itemId: manageItem.id, imageId }).unwrap();
+      setSuccess("Image deleted.");
+    } catch (requestError) {
+      setError(apiMessage(requestError, "Unable to delete image."));
+    }
+  }
+
+  async function handleBlockSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!manageItem) return;
+    resetMessages();
+    const form = new FormData(event.currentTarget);
+    const startDate = String(form.get("startDate") || "");
+    const endDate = String(form.get("endDate") || "");
+    const reason = String(form.get("reason") || "").trim() || undefined;
+    if (!startDate || !endDate || endDate < startDate) {
+      setError("Choose a valid blocked date range.");
+      return;
+    }
+    try {
+      await createBlock({ itemId: manageItem.id, body: { startDate, endDate, reason } }).unwrap();
+      event.currentTarget.reset();
+      setSuccess("Availability block created.");
+    } catch (requestError) {
+      setError(apiMessage(requestError, "Unable to create availability block."));
+    }
+  }
+
+  async function removeBlock(blockId: string) {
+    if (!manageItem) return;
+    resetMessages();
+    try {
+      await deleteBlock({ itemId: manageItem.id, blockId }).unwrap();
+      setSuccess("Availability block removed.");
+    } catch (requestError) {
+      setError(apiMessage(requestError, "Unable to remove availability block."));
+    }
+  }
 
   return (
-    <div className="mx-auto max-w-[1400px] px-4 py-4 sm:px-6 sm:py-6 space-y-6 text-slate-800">
-      <div className="max-w-6xl mx-auto space-y-6">
-
-        {/* TOP HEADER */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-extrabold text-[#0f172a] tracking-tight">
-              Inventory Management
-            </h1>
-            <p className="text-sm text-slate-500 mt-1">
-              Track and manage your professional gear listings.
-            </p>
-          </div>
-
-          {view === 'list' && (
-            <div className="flex items-center gap-3">
-              <button className="flex items-center gap-2 px-4 py-2 bg-white rounded-lg text-sm font-semibold border border-slate-200 text-slate-700 shadow-sm hover:bg-slate-50 transition-colors">
-                <Filter className="w-4 h-4" />
-                Filter
-              </button>
-              <button
-                onClick={() => setView('form')}
-                className="flex items-center gap-2 px-4 py-2 bg-[#d91d2a] rounded-lg text-sm font-semibold text-white shadow hover:bg-[#b81823] transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-                New Listing
-              </button>
-            </div>
-          )}
+    <div className="mx-auto max-w-[1400px] space-y-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-sm font-semibold text-[#F73030]">Inventory</p>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-950">Listings</h1>
+          <p className="mt-1 text-sm text-slate-500">Create listings, manage images, status, and rental availability.</p>
         </div>
-
-        {/* LIST VIEW */}
-        {view === 'list' ? (
-          <>
-            {/* STATS CARDS */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="bg-white/80 backdrop-blur rounded-xl p-4 border border-white/60 shadow-sm">
-                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Assets</p>
-                <div className="flex items-baseline gap-2 mt-2">
-                  <span className="text-2xl font-bold text-slate-900">{inventory.length + 20}</span>
-                  <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">↑ 12%</span>
-                </div>
-              </div>
-
-              <div className="bg-white/80 backdrop-blur rounded-xl p-4 border border-white/60 shadow-sm">
-                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Active Listings</p>
-                <div className="flex items-baseline gap-2 mt-2">
-                  <span className="text-2xl font-bold text-slate-900">{inventory.length + 14}</span>
-                  <span className="text-xs font-medium text-slate-500">75% Utility</span>
-                </div>
-              </div>
-
-              <div className="bg-white/80 backdrop-blur rounded-xl p-4 border border-white/60 shadow-sm">
-                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Monthly Revenue</p>
-                <div className="flex items-baseline gap-2 mt-2">
-                  <span className="text-2xl font-bold text-slate-900">$4,280</span>
-                  <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">↑ $850</span>
-                </div>
-              </div>
-
-              <div className="bg-white/80 backdrop-blur rounded-xl p-4 border border-white/60 shadow-sm">
-                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Avg. Daily Rate</p>
-                <div className="flex items-baseline gap-2 mt-2">
-                  <span className="text-2xl font-bold text-slate-900">$145</span>
-                  <span className="text-xs font-medium text-slate-500">Market Comp</span>
-                </div>
-              </div>
-            </div>
-
-            {/* INVENTORY TABLE / LIST */}
-            <div className="space-y-4">
-              {/* Header row (Visible on desktop) */}
-              <div className="hidden md:grid grid-cols-12 px-6 py-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                <div className="col-span-5">Asset Name & Details</div>
-                <div className="col-span-2 text-right">Daily Rate</div>
-                <div className="col-span-2 text-right">Security Deposit</div>
-                <div className="col-span-1 text-center">Status</div>
-                <div className="col-span-1 text-center">Availability</div>
-                <div className="col-span-1 text-right">Actions</div>
-              </div>
-
-              {/* Data Items */}
-              {inventory.map((item) => (
-                <div 
-                  key={item.id} 
-                  className="bg-white/90 backdrop-blur rounded-2xl p-4 md:px-6 md:py-4 border border-white shadow-sm hover:shadow-md transition-all duration-200"
-                >
-                  <div className="grid grid-cols-1 md:grid-cols-12 items-center gap-4 md:gap-0">
-                    
-                    {/* Item Image & Details */}
-                    <div className="md:col-span-5 flex items-center gap-4">
-                      <img 
-                        src={item.image} 
-                        alt={item.name} 
-                        className="w-16 h-16 rounded-xl object-cover bg-slate-900 border border-slate-200 shadow-inner flex-shrink-0"
-                      />
-                      <div>
-                        <h3 className="font-bold text-slate-900 text-sm">{item.name}</h3>
-                        <p className="text-xs text-slate-400 mt-0.5">{item.sn} | {item.specs}</p>
-                      </div>
-                    </div>
-
-                    {/* Daily Rate */}
-                    <div className="md:col-span-2 md:text-right flex md:block justify-between items-center text-xs md:text-sm">
-                      <span className="md:hidden text-slate-400 font-medium">Daily Rate:</span>
-                      <span className="font-bold text-slate-900">${item.dailyRate.toFixed(2)}</span>
-                    </div>
-
-                    {/* Security Deposit */}
-                    <div className="md:col-span-2 md:text-right flex md:block justify-between items-center text-xs md:text-sm">
-                      <span className="md:hidden text-slate-400 font-medium">Security Deposit:</span>
-                      <span className="font-bold text-slate-900">${item.securityDeposit.toFixed(2)}</span>
-                    </div>
-
-                    {/* Status Badge */}
-                    <div className="md:col-span-1 flex md:justify-center">
-                      <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-800 text-[11px] font-extrabold rounded-full tracking-wide">
-                        {item.status}
-                      </span>
-                    </div>
-
-                    {/* Availability Switch */}
-                    <div className="md:col-span-1 flex items-center justify-start md:justify-center gap-2">
-                      <button 
-                        onClick={() => toggleAvailability(item.id)}
-                        className={`w-9 h-5 rounded-full p-0.5 transition-colors relative ${item.available ? 'bg-emerald-500' : 'bg-slate-300'}`}
-                      >
-                        <div className={`w-4 h-4 bg-white rounded-full shadow transform transition-transform ${item.available ? 'translate-x-4' : 'translate-x-0'}`} />
-                      </button>
-                      <span className="text-[11px] font-semibold text-slate-400">
-                        {item.available ? 'Available' : 'Rented'}
-                      </span>
-                    </div>
-
-                    {/* Actions */}
-                    <div className="md:col-span-1 flex items-center justify-end gap-2 text-slate-400">
-                      <button 
-                        onClick={() => setView('form')}
-                        className="p-1 hover:text-slate-600 transition-colors"
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </button>
-                      <button className="p-1 hover:text-slate-600 transition-colors">
-                        <MoreVertical className="w-4 h-4" />
-                      </button>
-                    </div>
-
-                  </div>
-                </div>
-              ))}
-            </div>
-          </>
-        ) : (
-          /* FORM VIEW (New / Edit Listing) */
-          <div className="space-y-6">
-            <button 
-              onClick={() => setView('list')}
-              className="flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-slate-900 transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Back to Inventory
-            </button>
-
-            <form onSubmit={handleSaveListing} className="space-y-6">
-              
-              {/* SECTION 1: BASIC INFORMATION */}
-              <div className="bg-white/90 backdrop-blur rounded-2xl p-6 border border-white shadow-sm space-y-4">
-                <div className="flex items-center gap-2 pb-2 border-b border-slate-100 text-slate-800 font-bold text-sm">
-                  <Info className="w-4 h-4 text-rose-500" />
-                  <span>Basic Information</span>
-                </div>
-
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
-                      Listing Title
-                    </label>
-                    <input 
-                      type="text"
-                      value={formData.title}
-                      onChange={e => setFormData({ ...formData, title: e.target.value })}
-                      className="w-full text-sm font-medium px-3.5 py-2.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition-all"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
-                        Category
-                      </label>
-                      <input 
-                        type="text"
-                        value={formData.category}
-                        onChange={e => setFormData({ ...formData, category: e.target.value })}
-                        className="w-full text-sm font-medium px-3.5 py-2.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition-all"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
-                        Brand
-                      </label>
-                      <input 
-                        type="text"
-                        value={formData.brand}
-                        onChange={e => setFormData({ ...formData, brand: e.target.value })}
-                        className="w-full text-sm font-medium px-3.5 py-2.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition-all"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
-                        Model
-                      </label>
-                      <input 
-                        type="text"
-                        value={formData.model}
-                        onChange={e => setFormData({ ...formData, model: e.target.value })}
-                        className="w-full text-sm font-medium px-3.5 py-2.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition-all"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
-                        Serial Number
-                      </label>
-                      <input 
-                        type="text"
-                        value={formData.serialNumber}
-                        onChange={e => setFormData({ ...formData, serialNumber: e.target.value })}
-                        className="w-full text-sm font-medium px-3.5 py-2.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition-all"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* SECTION 2: MEDIA UPLOAD */}
-              <div className="bg-white/90 backdrop-blur rounded-2xl p-6 border border-white shadow-sm space-y-4">
-                <div className="flex items-center gap-2 pb-2 border-b border-slate-100 text-slate-800 font-bold text-sm">
-                  <ImageIcon className="w-4 h-4 text-rose-500" />
-                  <span>Media Upload</span>
-                </div>
-
-                <div className="border-2 border-dashed border-slate-200 bg-slate-50/50 rounded-xl p-6 text-center hover:border-rose-300 transition-colors cursor-pointer">
-                  <div className="mx-auto w-8 h-8 rounded-full bg-rose-50 text-rose-500 flex items-center justify-center mb-2">
-                    <UploadCloud className="w-5 h-5" />
-                  </div>
-                  <p className="text-xs font-bold text-slate-800">Drag and drop high-res images here</p>
-                  <p className="text-[11px] text-slate-400 mt-1">Minimum 1600x1200px recommended, Max 10MB per file.</p>
-                </div>
-
-                {/* Thumbnails */}
-                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3 pt-2">
-                  <div className="relative rounded-lg overflow-hidden border border-slate-200 aspect-[4/3] group">
-                    <span className="absolute top-1 left-1 bg-rose-600 text-[9px] font-extrabold text-white px-1.5 py-0.5 rounded uppercase z-10">
-                      PRIMARY
-                    </span>
-                    <img 
-                      src="https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=300&auto=format&fit=crop&q=80" 
-                      alt="Primary"
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <div className="rounded-lg overflow-hidden border border-slate-200 aspect-[4/3]">
-                    <img 
-                      src="https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=300&auto=format&fit=crop&q=80" 
-                      alt="Secondary"
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <div className="border-2 border-dashed border-slate-200 rounded-lg aspect-[4/3] flex items-center justify-center text-slate-300 hover:text-slate-400 hover:border-slate-300 cursor-pointer transition-colors">
-                    <Plus className="w-6 h-6" />
-                  </div>
-                </div>
-              </div>
-
-              {/* SECTION 3: PRICING & RENTAL RULES */}
-              <div className="bg-white/90 backdrop-blur rounded-2xl p-6 border border-white shadow-sm space-y-4">
-                <div className="flex items-center gap-2 pb-2 border-b border-slate-100 text-slate-800 font-bold text-sm">
-                  <DollarSign className="w-4 h-4 text-rose-500" />
-                  <span>Pricing & Rental Rules</span>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
-                      Daily Rate (USD)
-                    </label>
-                    <div className="relative">
-                      <span className="absolute left-3.5 top-2.5 text-slate-400 text-sm">$</span>
-                      <input 
-                        type="number"
-                        value={formData.dailyRate}
-                        onChange={e => setFormData({ ...formData, dailyRate: e.target.value })}
-                        className="w-full text-sm font-medium pl-8 pr-3.5 py-2.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition-all"
-                      />
-                    </div>
-                    <p className="text-[11px] text-slate-400 mt-1">
-                      Recommended: $230 - $280 for this model.
-                    </p>
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
-                      Security Deposit (USD)
-                    </label>
-                    <div className="relative">
-                      <span className="absolute left-3.5 top-2.5 text-slate-400 text-sm">$</span>
-                      <input 
-                        type="number"
-                        value={formData.securityDeposit}
-                        onChange={e => setFormData({ ...formData, "securityDeposit": e.target.value })}
-                        className="w-full text-sm font-medium pl-8 pr-3.5 py-2.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition-all"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* CHECKBOXES */}
-                <div className="pt-2 space-y-2">
-                  <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                    Rental Rules
-                  </span>
-                  
-                  <label className="flex items-center gap-2.5 text-xs font-semibold text-slate-700 cursor-pointer">
-                    <input 
-                      type="checkbox"
-                      checked={formData.coiRequired}
-                      onChange={e => setFormData({ ...formData, coiRequired: e.target.checked })}
-                      className="w-4 h-4 rounded text-rose-600 focus:ring-rose-500 border-slate-300"
-                    />
-                    COI (Certificate of Insurance) Required
-                  </label>
-
-                  <label className="flex items-center gap-2.5 text-xs font-semibold text-slate-700 cursor-pointer">
-                    <input 
-                      type="checkbox"
-                      checked={formData.cleaningFeeIncluded}
-                      onChange={e => setFormData({ ...formData, cleaningFeeIncluded: e.target.checked })}
-                      className="w-4 h-4 rounded text-rose-600 focus:ring-rose-500 border-slate-300"
-                    />
-                    Cleaning fee included in rate
-                  </label>
-
-                  <label className="flex items-center gap-2.5 text-xs font-semibold text-slate-700 cursor-pointer">
-                    <input 
-                      type="checkbox"
-                      checked={formData.availableForShipping}
-                      onChange={e => setFormData({ ...formData, availableForShipping: e.target.checked })}
-                      className="w-4 h-4 rounded text-rose-600 focus:ring-rose-500 border-slate-300"
-                    />
-                    Available for shipping
-                  </label>
-                </div>
-
-                {/* AVAILABILITY PREVIEW CALENDAR */}
-                <div className="pt-4 space-y-2">
-                  <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                    Availability Preview
-                  </span>
-                  <div className="bg-slate-50/80 rounded-xl p-4 border border-slate-200/60">
-                    <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-slate-400 uppercase mb-2">
-                      <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
-                    </div>
-                    <div className="grid grid-cols-7 gap-1 text-xs text-center font-medium">
-                      <div className="py-2 text-slate-300">28</div>
-                      <div className="py-2 text-slate-300">29</div>
-                      <div className="py-2 text-slate-300">30</div>
-                      <div className="py-2 bg-white rounded border border-slate-200">1</div>
-                      <div className="py-2 bg-white rounded border border-slate-200">2</div>
-                      <div className="py-2 bg-white rounded border border-slate-200">3</div>
-                      <div className="py-2 bg-white rounded border border-slate-200">4</div>
-                      <div className="py-2 bg-white rounded border border-slate-200">5</div>
-                      <div className="py-2 bg-white rounded border border-slate-200">6</div>
-                      <div className="py-2 bg-rose-500 text-white rounded font-bold">7</div>
-                      <div className="py-2 bg-rose-500 text-white rounded font-bold">8</div>
-                      <div className="py-2 bg-rose-500 text-white rounded font-bold">9</div>
-                      <div className="py-2 bg-white rounded border border-slate-200">10</div>
-                      <div className="py-2 bg-white rounded border border-slate-200">11</div>
-                    </div>
-
-                    <div className="flex items-center justify-between text-[11px] pt-3 mt-2 border-t border-slate-200/60">
-                      <div className="flex items-center gap-4">
-                        <span className="flex items-center gap-1.5 text-slate-500">
-                          <span className="w-2.5 h-2.5 rounded-full border border-slate-300 bg-white inline-block"></span>
-                          Available
-                        </span>
-                        <span className="flex items-center gap-1.5 text-slate-500">
-                          <span className="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block"></span>
-                          Booked
-                        </span>
-                      </div>
-                      <button type="button" className="text-rose-600 font-bold hover:underline">
-                        Edit Full Calendar
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* ACTION BUTTON */}
-              <div className="flex justify-end">
-                <button
-                  type="submit"
-                  className="px-6 py-2.5 bg-[#d91d2a] hover:bg-[#b81823] text-white text-sm font-bold rounded-xl shadow transition-colors"
-                >
-                  Finalize & Publish
-                </button>
-              </div>
-
-            </form>
-          </div>
-        )}
-
+        <button onClick={openCreate} className="rounded-xl bg-[#F73030] px-4 py-2.5 text-sm font-semibold text-white">Add listing</button>
       </div>
+
+      {error ? <div className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</div> : null}
+      {success ? <div className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-700">{success}</div> : null}
+
+      {showForm ? (
+        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-bold text-slate-950">{editing ? "Edit listing" : "Create listing"}</h2>
+              <p className="text-xs text-slate-500">Fields match your CreateItemRequest / UpdateItemRequest API.</p>
+            </div>
+            <button onClick={() => { setShowForm(false); setEditing(null); }} className="text-sm font-semibold text-slate-500">Close</button>
+          </div>
+
+          <form key={editing?.id || "new"} onSubmit={saveItem} className="mt-5 grid gap-4 md:grid-cols-2">
+            <label className="text-sm font-semibold text-slate-700">Title<input name="title" required defaultValue={editing?.title || ""} className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2.5 font-normal" /></label>
+            <label className="text-sm font-semibold text-slate-700">Category<select name="categoryId" required defaultValue={editing?.categoryId || ""} className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2.5 font-normal"><option value="">Select category</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></label>
+            <label className="text-sm font-semibold text-slate-700">Condition<select name="condition" defaultValue={editing?.condition || "GOOD"} className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2.5 font-normal"><option value="NEW">New</option><option value="LIKE_NEW">Like new</option><option value="GOOD">Good</option><option value="FAIR">Fair</option><option value="POOR">Poor</option></select></label>
+            <label className="text-sm font-semibold text-slate-700">Price / day<input name="pricePerDay" type="number" min="0.01" step="0.01" required defaultValue={editing?.pricePerDay ?? ""} className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2.5 font-normal" /></label>
+            <label className="text-sm font-semibold text-slate-700">Security deposit<input name="depositAmount" type="number" min="0" step="0.01" defaultValue={editing?.depositAmount ?? ""} className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2.5 font-normal" /></label>
+            <label className="text-sm font-semibold text-slate-700">Location text<input name="locationText" required defaultValue={editing?.locationText || ""} className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2.5 font-normal" /></label>
+            <label className="text-sm font-semibold text-slate-700">Latitude<input name="latitude" type="number" step="any" min="-90" max="90" required defaultValue={editing?.latitude ?? ""} className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2.5 font-normal" /></label>
+            <label className="text-sm font-semibold text-slate-700">Longitude<input name="longitude" type="number" step="any" min="-180" max="180" required defaultValue={editing?.longitude ?? ""} className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2.5 font-normal" /></label>
+            <label className="text-sm font-semibold text-slate-700 md:col-span-2">Description<textarea name="description" rows={3} defaultValue={editing?.description || ""} className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2.5 font-normal" /></label>
+            <label className="text-sm font-semibold text-slate-700 md:col-span-2">Specifications JSON<textarea name="specifications" rows={3} defaultValue={editing?.specifications ? JSON.stringify(editing.specifications, null, 2) : ""} placeholder='{"brand":"Sony","model":"A7 IV"}' className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2.5 font-mono text-xs font-normal" /></label>
+            <div className="flex gap-2 md:col-span-2"><button disabled={createState.isLoading || updateState.isLoading} className="rounded-lg bg-[#253C95] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60">{createState.isLoading || updateState.isLoading ? "Saving..." : editing ? "Save changes" : "Create listing"}</button><button type="button" onClick={() => { setShowForm(false); setEditing(null); }} className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700">Cancel</button></div>
+          </form>
+        </section>
+      ) : null}
+
+      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        {isLoading ? <p className="p-6 text-sm text-slate-500">Loading listings...</p> : null}
+        <div className="divide-y divide-slate-100">
+          {items.map((item) => (
+            <article key={item.id} className="p-5">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div className="flex min-w-0 items-center gap-4">
+                  <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-slate-100">{item.primaryImageUrl ? <img src={item.primaryImageUrl} alt="" className="h-full w-full object-cover" /> : null}</div>
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2"><h2 className="truncate font-bold text-slate-950">{item.title || "Untitled"}</h2><span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-600">{item.approvalStatus || "—"}</span></div>
+                    <p className="mt-1 text-sm font-semibold text-[#253C95]">{money(item.pricePerDay)} / day</p>
+                    <p className="mt-1 text-xs text-slate-500">{item.locationText || "No location"} · {item.available ? "Available" : "Unavailable"} · {item.status || "—"}</p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button onClick={() => setManageItem(item)} className="rounded-lg bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700">Images & dates</button>
+                  <button onClick={() => openEdit(item)} className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700">Edit</button>
+                  <button onClick={() => toggleStatus(item)} disabled={statusState.isLoading} className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 disabled:opacity-50">{item.status === "ACTIVE" ? "Hide" : "Activate"}</button>
+                  <select aria-label="Availability" defaultValue={item.available ? "AVAILABLE" : "UNAVAILABLE"} onChange={(event) => setAvailability(item.id, event.target.value as "AVAILABLE" | "UNAVAILABLE" | "HIDDEN")} disabled={availabilityState.isLoading} className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700"><option value="AVAILABLE">Available</option><option value="UNAVAILABLE">Unavailable</option><option value="HIDDEN">Hidden</option></select>
+                  <button onClick={() => handleDelete(item)} disabled={deleteState.isLoading} className="rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600 disabled:opacity-50">Delete</button>
+                </div>
+              </div>
+            </article>
+          ))}
+          {!isLoading && !items.length ? <p className="p-10 text-center text-sm text-slate-500">You do not have any listings yet.</p> : null}
+        </div>
+      </section>
+
+      {manageItem ? (
+        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="flex items-start justify-between gap-3">
+            <div><h2 className="text-lg font-bold text-slate-950">Manage: {manageItem.title}</h2><p className="text-xs text-slate-500">Images and unavailable rental date ranges.</p></div>
+            <button onClick={() => setManageItem(null)} className="text-sm font-semibold text-slate-500">Close</button>
+          </div>
+
+          <div className="mt-5 grid gap-6 xl:grid-cols-2">
+            <div>
+              <h3 className="font-bold text-slate-900">Images</h3>
+              <form onSubmit={handleImageUpload} className="mt-3 flex flex-col gap-3 sm:flex-row"><input name="files" type="file" accept="image/*" multiple className="min-w-0 flex-1 rounded-lg border border-slate-300 p-2 text-sm" /><button disabled={uploadState.isLoading} className="rounded-lg bg-[#253C95] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{uploadState.isLoading ? "Uploading..." : "Upload"}</button></form>
+              {imagesLoading ? <p className="mt-4 text-sm text-slate-500">Loading images...</p> : null}
+              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {images.map((image) => (
+                  <div key={image.id} className="overflow-hidden rounded-xl border border-slate-200">
+                    <div className="aspect-square bg-slate-100">{image.imageUrl || image.url ? <img src={image.imageUrl || image.url} alt="" className="h-full w-full object-cover" /> : null}</div>
+                    <div className="flex items-center justify-between gap-2 p-2"><span className="text-[10px] font-bold text-slate-500">{image.primary ? "PRIMARY" : `#${image.sortOrder ?? 0}`}</span><div className="flex gap-2">{!image.primary && image.id ? <button onClick={() => makePrimary(image.id!)} disabled={updateImageState.isLoading} className="text-[10px] font-bold text-[#253C95]">Primary</button> : null}{image.id ? <button onClick={() => removeImage(image.id!)} disabled={deleteImageState.isLoading} className="text-[10px] font-bold text-red-600">Delete</button> : null}</div></div>
+                  </div>
+                ))}
+                {!imagesLoading && !images.length ? <p className="col-span-full py-5 text-center text-sm text-slate-500">No images uploaded.</p> : null}
+              </div>
+            </div>
+
+            <div>
+              <h3 className="font-bold text-slate-900">Blocked rental dates</h3>
+              <form onSubmit={handleBlockSubmit} className="mt-3 grid gap-3 sm:grid-cols-2"><label className="text-xs font-semibold text-slate-600">Start<input name="startDate" type="date" required className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-normal" /></label><label className="text-xs font-semibold text-slate-600">End<input name="endDate" type="date" required className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-normal" /></label><input name="reason" placeholder="Reason (optional)" className="rounded-lg border border-slate-300 px-3 py-2 text-sm sm:col-span-2" /><button disabled={createBlockState.isLoading} className="rounded-lg bg-[#253C95] px-4 py-2 text-sm font-semibold text-white sm:col-span-2 disabled:opacity-50">{createBlockState.isLoading ? "Adding..." : "Block dates"}</button></form>
+              {blocksLoading ? <p className="mt-4 text-sm text-slate-500">Loading blocked dates...</p> : null}
+              <div className="mt-4 divide-y divide-slate-100 rounded-xl border border-slate-200">
+                {blocks.map((block) => <div key={block.id} className="flex items-center justify-between gap-3 p-3"><div><p className="text-sm font-semibold text-slate-900">{block.startDate} → {block.endDate}</p><p className="text-xs text-slate-500">{block.reason || block.source || "Unavailable"}</p></div><button onClick={() => removeBlock(block.id)} disabled={deleteBlockState.isLoading} className="text-xs font-semibold text-red-600">Remove</button></div>)}
+                {!blocksLoading && !blocks.length ? <p className="p-5 text-center text-sm text-slate-500">No blocked dates.</p> : null}
+              </div>
+            </div>
+          </div>
+        </section>
+      ) : null}
     </div>
   );
 }

@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useCreateVendorReportMutation } from "@/redux/services/vendorApi";
 
 type ReportReasonId =
   | "spam"
@@ -77,10 +79,41 @@ function ReasonOption({
 }
 
 export default function ReportReview() {
+  const searchParams = useSearchParams();
+  const reportedReviewId = searchParams.get("reviewId") || "";
+  const [createReport, createReportState] = useCreateVendorReportMutation();
   const [selectedReason, setSelectedReason] = useState<ReportReasonId | null>(
     null
   );
   const [details, setDetails] = useState("");
+  const [submitMessage, setSubmitMessage] = useState("");
+  const [submitError, setSubmitError] = useState("");
+
+  const handleSubmitReport = async () => {
+    setSubmitError("");
+    setSubmitMessage("");
+    if (!reportedReviewId) {
+      setSubmitError("Missing reviewId. Open this page with ?reviewId=<review-id>.");
+      return;
+    }
+    if (!selectedReason) {
+      setSubmitError("Choose a reason for the report.");
+      return;
+    }
+    try {
+      await createReport({
+        reportType: "REVIEW",
+        reportedReviewId,
+        description: `[${selectedReason}] ${details.trim()}`.trim(),
+      }).unwrap();
+      setSubmitMessage("Review report submitted successfully.");
+    } catch (error) {
+      const message = typeof error === "object" && error && "data" in error
+        ? (error as { data?: { message?: string } }).data?.message
+        : undefined;
+      setSubmitError(message || "Unable to submit review report.");
+    }
+  };
 
   return (
     <div className="mx-auto min-h-screen max-w-3xl bg-slate-100 px-4 py-10 sm:px-6">
@@ -232,15 +265,17 @@ export default function ReportReview() {
               />
             </div>
 
+            {submitError ? <p className="mt-4 text-xs font-medium text-red-600">{submitError}</p> : null}
+            {submitMessage ? <p className="mt-4 text-xs font-medium text-emerald-600">{submitMessage}</p> : null}
+
             <div className="mt-7 flex flex-col gap-3 sm:flex-row">
               <button
                 type="button"
-                onClick={() =>
-                  console.log("submit report", { selectedReason, details })
-                }
-                className="flex items-center justify-center gap-2 rounded-xl bg-red-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-800 sm:flex-1"
+                onClick={handleSubmitReport}
+                disabled={createReportState.isLoading}
+                className="flex items-center justify-center gap-2 rounded-xl bg-red-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-800 disabled:opacity-60 sm:flex-1"
               >
-                Submit Report
+                {createReportState.isLoading ? "Submitting..." : "Submit Report"}
                 <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true">
                   <path
                     d="M4 4l13 6-13 6 3-6-3-6Z"

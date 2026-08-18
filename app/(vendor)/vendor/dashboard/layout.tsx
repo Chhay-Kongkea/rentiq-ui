@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
+import { useGetMyProfileQuery } from "@/redux/services/userApi";
+import { useGetVendorBookingsQuery, useGetVendorUnreadNotificationCountQuery } from "@/redux/services/vendorApi";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Footer from "@/components/footer";
@@ -26,15 +28,19 @@ export default function VendorDashboardLayout({
 }) {
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { data: profile } = useGetMyProfileQuery();
+  const { data: bookings = [] } = useGetVendorBookingsQuery();
+  const { data: unread } = useGetVendorUnreadNotificationCountQuery();
+  const pendingBookings = bookings.filter((booking) => booking.status === "PENDING").length;
 
   const navItems = [
     { name: "Dashboard", href: "/vendor/dashboard", icon: faHouse },
-    { name: "Requests", href: "/vendor/dashboard/requests", icon: faInbox, count: 2 },
-    { name: "Booking", href: "/vendor/dashboard/booking", icon: faCalendarCheck, count: 5 },
+    { name: "Requests", href: "/vendor/dashboard/requests", icon: faInbox },
+    { name: "Booking", href: "/vendor/dashboard/booking", icon: faCalendarCheck, count: pendingBookings },
     { name: "Listings", href: "/vendor/dashboard/listings", icon: faListCheck },
     { name: "Earnings", href: "/vendor/dashboard/earnings", icon: faChartLine },
     { name: "Wallet", href: "/vendor/dashboard/wallet", icon: faWallet },
-    { name: "Notification", href: "/vendor/dashboard/notifications", icon: faBell },
+    { name: "Notification", href: "/vendor/dashboard/notifications", icon: faBell, count: Number(unread?.unreadCount || 0) },
   ];
 
   const toggleMobileMenu = () => {
@@ -69,7 +75,7 @@ export default function VendorDashboardLayout({
         </div>
 
         <img
-          src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=80"
+          src={profile?.avatarUrl || "/img/samsreynich.jpg"}
           alt="Vendor Profile"
           className="h-9 w-9 rounded-full object-cover border border-slate-200"
         />
@@ -148,15 +154,15 @@ export default function VendorDashboardLayout({
         <div className="space-y-4 border-t border-slate-100 pt-4">
           <div className="flex items-center gap-3">
             <img
-              src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=80"
+              src={profile?.avatarUrl || "/img/samsreynich.jpg"}
               alt="Vendor Profile"
               className="h-10 w-10 rounded-full object-cover"
             />
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-bold text-slate-900">
-                Cambodia Pro Gear
+                {profile ? `${profile.firstName} ${profile.lastName}`.trim() || profile.username : "Vendor"}
               </p>
-              <p className="text-xs text-slate-400">Vendor ID: VND-1024</p>
+              <p className="truncate text-xs text-slate-400">{profile?.email || "Vendor account"}</p>
               <span className="mt-1 inline-block rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-600">
                 Verified
               </span>

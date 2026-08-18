@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useCreateVendorReportMutation } from "@/redux/services/vendorApi";
 
 const MAX_PHOTOS = 5;
 const MAX_DESCRIPTION_LENGTH = 2000;
@@ -206,9 +208,14 @@ function PhotoUploadGrid({
 }
 
 export default function ReportUser() {
+  const searchParams = useSearchParams();
+  const reportedUserId = searchParams.get("userId") || "";
+  const [createReport, createReportState] = useCreateVendorReportMutation();
   const [category, setCategory] = useState("");
   const [description, setDescription] = useState("");
   const [photos, setPhotos] = useState<string[]>([]);
+  const [submitMessage, setSubmitMessage] = useState("");
+  const [submitError, setSubmitError] = useState("");
 
   const handleAddPhotos = (files: FileList) => {
     const remaining = MAX_PHOTOS - photos.length;
@@ -219,6 +226,32 @@ export default function ReportUser() {
 
   const handleRemovePhoto = (index: number) => {
     setPhotos((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSubmitReport = async () => {
+    setSubmitError("");
+    setSubmitMessage("");
+    if (!reportedUserId) {
+      setSubmitError("Missing userId. Open this page with ?userId=<reported-user-id>.");
+      return;
+    }
+    if (!category || !description.trim()) {
+      setSubmitError("Choose a report category and enter a description.");
+      return;
+    }
+    try {
+      await createReport({
+        reportType: "USER",
+        reportedUserId,
+        description: `[${category}] ${description.trim()}`,
+      }).unwrap();
+      setSubmitMessage("Report submitted successfully.");
+    } catch (error) {
+      const message = typeof error === "object" && error && "data" in error
+        ? (error as { data?: { message?: string } }).data?.message
+        : undefined;
+      setSubmitError(message || "Unable to submit report.");
+    }
   };
 
   return (
@@ -303,13 +336,19 @@ export default function ReportUser() {
                 account suspension.
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => console.log("submit report", { category, description, photos })}
-              className="w-full flex-shrink-0 rounded-xl bg-red-700 px-8 py-3.5 text-sm font-semibold text-white transition hover:bg-red-800 sm:w-auto"
-            >
-              Submit Report
-            </button>
+            <div className="w-full sm:w-auto">
+              {submitError ? <p className="mb-2 text-xs font-medium text-red-600">{submitError}</p> : null}
+              {submitMessage ? <p className="mb-2 text-xs font-medium text-emerald-600">{submitMessage}</p> : null}
+              {photos.length ? <p className="mb-2 text-[11px] text-amber-700">The current report API has no evidence-image field, so selected photos are preview-only.</p> : null}
+              <button
+                type="button"
+                onClick={handleSubmitReport}
+                disabled={createReportState.isLoading}
+                className="w-full flex-shrink-0 rounded-xl bg-red-700 px-8 py-3.5 text-sm font-semibold text-white transition hover:bg-red-800 disabled:opacity-60 sm:w-auto"
+              >
+                {createReportState.isLoading ? "Submitting..." : "Submit Report"}
+              </button>
+            </div>
           </div>
         </div>
       </main>
