@@ -148,7 +148,7 @@ export default function PostRequestPage() {
     setIsSubmitting(true);
     try {
       if (!pickupCoordinates) return;
-      const createdRequest = await createItemRequest({ categoryId: Number(category), title: itemName.trim(), description: description.trim(), budgetMin: Number(minBudget), budgetMax: Number(maxBudget), neededFrom: startDate, neededTo: endDate, latitude: pickupCoordinates.lat, longitude: pickupCoordinates.lng, radiusKm: 10 }).unwrap();
+      const createdRequest = await createItemRequest({ categoryId: category, title: itemName.trim(), description: description.trim(), budgetMin: Number(minBudget), budgetMax: Number(maxBudget), neededFrom: startDate, neededTo: endDate, latitude: pickupCoordinates.lat, longitude: pickupCoordinates.lng, radiusKm: 10 }).unwrap();
       router.push(`/user/requests/requests_submit?requestId=${createdRequest.id}`);
     } finally {
       setIsSubmitting(false);

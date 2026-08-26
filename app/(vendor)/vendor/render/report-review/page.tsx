@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useCreateVendorReportMutation } from "@/redux/services/vendorApi";
 
@@ -79,6 +79,14 @@ function ReasonOption({
 }
 
 export default function ReportReview() {
+  return (
+    <Suspense fallback={null}>
+      <ReportReviewContent />
+    </Suspense>
+  );
+}
+
+function ReportReviewContent() {
   const searchParams = useSearchParams();
   const reportedReviewId = searchParams.get("reviewId") || "";
   const [createReport, createReportState] = useCreateVendorReportMutation();

@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { ArrowRight, CalendarDays, CheckCircle2, ClipboardCheck, Clock3, MapPin, ShieldCheck } from "lucide-react";
@@ -7,6 +8,14 @@ import { useGetItemQuery } from "@/redux/services/itemApi";
 import Footer from "@/components/footer";
 
 export default function BookingConfirmationPage() {
+  return (
+    <Suspense fallback={null}>
+      <BookingConfirmationPageContent />
+    </Suspense>
+  );
+}
+
+function BookingConfirmationPageContent() {
   const { id } = useParams<{ id: string }>();
   const searchParams = useSearchParams();
   const bookingId = searchParams.get("bookingId") || "Pending";

@@ -26,7 +26,7 @@ function apiMessage(error: unknown, fallback: string) {
 
 export default function VendorRequestsPage() {
   const [keyword, setKeyword] = useState("");
-  const [categoryId, setCategoryId] = useState<number | undefined>();
+  const [categoryId, setCategoryId] = useState<string | undefined>();
   const [selectedRequest, setSelectedRequest] = useState<ItemRequestResponse | null>(null);
   const [editingOffer, setEditingOffer] = useState<OfferResponse | null>(null);
   const [error, setError] = useState("");
@@ -119,7 +119,7 @@ export default function VendorRequestsPage() {
           />
           <select
             value={categoryId ?? ""}
-            onChange={(event) => setCategoryId(event.target.value ? Number(event.target.value) : undefined)}
+            onChange={(event) => setCategoryId(event.target.value || undefined)}
             className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-[#253C95]"
           >
             <option value="">All categories</option>

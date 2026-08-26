@@ -78,7 +78,7 @@ export default function VendorListingsPage() {
     event.preventDefault();
     resetMessages();
     const form = new FormData(event.currentTarget);
-    const categoryId = Number(form.get("categoryId"));
+    const categoryId = String(form.get("categoryId") || "").trim();
     const pricePerDay = Number(form.get("pricePerDay"));
     const depositAmountRaw = String(form.get("depositAmount") || "").trim();
     const latitude = Number(form.get("latitude"));
@@ -95,7 +95,7 @@ export default function VendorListingsPage() {
       }
     }
 
-    if (!Number.isInteger(categoryId) || categoryId <= 0 || !Number.isFinite(pricePerDay) || pricePerDay <= 0 || !Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+    if (!categoryId || !Number.isFinite(pricePerDay) || pricePerDay <= 0 || !Number.isFinite(latitude) || !Number.isFinite(longitude)) {
       setError("Category, daily price, latitude, and longitude are required.");
       return;
     }

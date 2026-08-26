@@ -16,7 +16,7 @@ export interface ItemImage {
 export interface Item {
   id: string;
   ownerId?: string;
-  categoryId?: number;
+  categoryId?: string;
   title?: string;
   description?: string;
   condition?: ItemCondition;

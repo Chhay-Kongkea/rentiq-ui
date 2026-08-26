@@ -15,6 +15,7 @@ import {
   faChartLine,
   faWallet,
   faBell,
+  faStar,
   faHeadphonesSimple,
   faRightFromBracket,
   faBars,
@@ -39,6 +40,7 @@ export default function VendorDashboardLayout({
     { name: "Booking", href: "/vendor/dashboard/booking", icon: faCalendarCheck, count: pendingBookings },
     { name: "Listings", href: "/vendor/dashboard/listings", icon: faListCheck },
     { name: "Earnings", href: "/vendor/dashboard/earnings", icon: faChartLine },
+    { name: "Reviews", href: "/vendor/dashboard/reviews", icon: faStar },
     { name: "Wallet", href: "/vendor/dashboard/wallet", icon: faWallet },
     { name: "Notification", href: "/vendor/dashboard/notifications", icon: faBell, count: Number(unread?.unreadCount || 0) },
   ];

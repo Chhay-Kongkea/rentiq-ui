@@ -12,6 +12,7 @@ import type {
   CreateReportRequest,
   DisputeResponse,
   AddInspectionImagesRequest,
+  ImageUploadResponse,
   InspectionImageResponse,
   InspectionResponse,
   ItemRequestFilter,
@@ -222,6 +223,7 @@ export const vendorApi = api.injectEndpoints({
         { type: "Booking", id: bookingId },
         { type: "Booking", id: "VENDOR-LIST" },
         { type: "Booking", id: "VENDOR-SCHEDULE" },
+        { type: "Booking", id: `HISTORY-${bookingId}` },
         { type: "Vendor", id: "PERFORMANCE" },
         { type: "Vendor", id: "EARNINGS" },
       ],
@@ -236,7 +238,11 @@ export const vendorApi = api.injectEndpoints({
     }),
     scanVendorBookingQrCode: builder.mutation<BookingResponse, QrScanRequest>({
       query: (body) => ({ url: "/bookings/qr-code/scan", method: "POST", body }),
-      invalidatesTags: [{ type: "Booking", id: "VENDOR-LIST" }, { type: "Booking", id: "VENDOR-SCHEDULE" }],
+      invalidatesTags: (result) => [
+        { type: "Booking", id: "VENDOR-LIST" },
+        { type: "Booking", id: "VENDOR-SCHEDULE" },
+        ...(result ? [{ type: "Booking" as const, id: result.id }, { type: "Booking" as const, id: `HISTORY-${result.id}` }] : []),
+      ],
     }),
     getVendorBookingReceipt: builder.query<Blob, string>({
       query: (bookingId) => ({ url: `/bookings/${encodeURIComponent(bookingId)}/receipt`, responseHandler: (response) => response.blob() }),
@@ -299,37 +305,65 @@ export const vendorApi = api.injectEndpoints({
     }),
 
     // Reviews
-    addVendorReviewReply: builder.mutation<ReviewResponse, { reviewId: string; reply: string }>({
-      query: ({ reviewId, reply }) => ({ url: `/reviews/${encodeURIComponent(reviewId)}/reply`, method: "POST", body: { reply } }),
+    getVendorItemReviews: builder.query<SpringPage<ReviewResponse>, { itemId: string; page?: number; size?: number; sort?: string | string[] }>({
+      query: ({ itemId, ...paging }) => ({ url: `/items/${encodeURIComponent(itemId)}/reviews`, params: pageableParams(paging) }),
+      providesTags: (_result, _error, { itemId }) => [{ type: "Vendor", id: `REVIEWS-${itemId}` }],
     }),
-    editVendorReviewReply: builder.mutation<ReviewResponse, { reviewId: string; reply: string }>({
+    addVendorReviewReply: builder.mutation<ReviewResponse, { reviewId: string; itemId?: string; reply: string }>({
+      query: ({ reviewId, reply }) => ({ url: `/reviews/${encodeURIComponent(reviewId)}/reply`, method: "POST", body: { reply } }),
+      invalidatesTags: (_result, _error, { itemId }) => (itemId ? [{ type: "Vendor", id: `REVIEWS-${itemId}` }] : []),
+    }),
+    editVendorReviewReply: builder.mutation<ReviewResponse, { reviewId: string; itemId?: string; reply: string }>({
       query: ({ reviewId, reply }) => ({ url: `/reviews/${encodeURIComponent(reviewId)}/reply`, method: "PATCH", body: { reply } }),
+      invalidatesTags: (_result, _error, { itemId }) => (itemId ? [{ type: "Vendor", id: `REVIEWS-${itemId}` }] : []),
+    }),
+
+    // Generic image upload (used to attach photos to inspections)
+    uploadVendorImage: builder.mutation<ImageUploadResponse, File>({
+      query: (file) => {
+        const body = new FormData();
+        body.append("image", file);
+        return { url: "/images/upload", method: "POST", body };
+      },
     }),
 
     // Inspection / disputes / reports are shared booking operations that vendors can use.
-    getVendorInspection: builder.query<InspectionResponse, string>({ query: (bookingId) => `/bookings/${encodeURIComponent(bookingId)}/inspections` }),
+    getVendorInspection: builder.query<InspectionResponse, string>({
+      query: (bookingId) => `/bookings/${encodeURIComponent(bookingId)}/inspections`,
+      providesTags: (_result, _error, bookingId) => [{ type: "Booking", id: `INSPECTION-${bookingId}` }],
+    }),
     createVendorInspection: builder.mutation<InspectionResponse, { bookingId: string; body: UpsertInspectionRequest }>({
       query: ({ bookingId, body }) => ({ url: `/bookings/${encodeURIComponent(bookingId)}/inspections`, method: "POST", body }),
+      invalidatesTags: (_result, _error, { bookingId }) => [{ type: "Booking", id: `INSPECTION-${bookingId}` }],
     }),
     updateVendorInspection: builder.mutation<InspectionResponse, { bookingId: string; body: UpsertInspectionRequest }>({
       query: ({ bookingId, body }) => ({ url: `/bookings/${encodeURIComponent(bookingId)}/inspections`, method: "PATCH", body }),
+      invalidatesTags: (_result, _error, { bookingId }) => [{ type: "Booking", id: `INSPECTION-${bookingId}` }],
     }),
     getVendorInspectionImages: builder.query<InspectionImageResponse[], string>({
       query: (bookingId) => `/bookings/${encodeURIComponent(bookingId)}/inspections/images`,
+      providesTags: (_result, _error, bookingId) => [{ type: "Booking", id: `INSPECTION-IMAGES-${bookingId}` }],
     }),
     addVendorInspectionImages: builder.mutation<InspectionImageResponse[], { bookingId: string; body: AddInspectionImagesRequest }>({
       query: ({ bookingId, body }) => ({ url: `/bookings/${encodeURIComponent(bookingId)}/inspections/images`, method: "POST", body }),
+      invalidatesTags: (_result, _error, { bookingId }) => [{ type: "Booking", id: `INSPECTION-IMAGES-${bookingId}` }],
     }),
     deleteVendorInspectionImage: builder.mutation<void, { bookingId: string; imageId: string }>({
       query: ({ bookingId, imageId }) => ({ url: `/bookings/${encodeURIComponent(bookingId)}/inspections/images/${encodeURIComponent(imageId)}`, method: "DELETE" }),
+      invalidatesTags: (_result, _error, { bookingId }) => [{ type: "Booking", id: `INSPECTION-IMAGES-${bookingId}` }],
     }),
-    getVendorBookingDisputes: builder.query<DisputeResponse[], string>({ query: (bookingId) => `/bookings/${encodeURIComponent(bookingId)}/disputes` }),
+    getVendorBookingDisputes: builder.query<DisputeResponse[], string>({
+      query: (bookingId) => `/bookings/${encodeURIComponent(bookingId)}/disputes`,
+      providesTags: (_result, _error, bookingId) => [{ type: "Booking", id: `DISPUTES-${bookingId}` }],
+    }),
     createVendorBookingDispute: builder.mutation<DisputeResponse, { bookingId: string; body: CreateDisputeRequest }>({
       query: ({ bookingId, body }) => ({ url: `/bookings/${encodeURIComponent(bookingId)}/disputes`, method: "POST", body }),
+      invalidatesTags: (_result, _error, { bookingId }) => [{ type: "Booking", id: `DISPUTES-${bookingId}` }],
     }),
     getVendorDispute: builder.query<DisputeResponse, string>({ query: (disputeId) => `/disputes/${encodeURIComponent(disputeId)}` }),
-    updateVendorDispute: builder.mutation<DisputeResponse, { disputeId: string; body: UpdateDisputeRequest }>({
+    updateVendorDispute: builder.mutation<DisputeResponse, { disputeId: string; bookingId?: string; body: UpdateDisputeRequest }>({
       query: ({ disputeId, body }) => ({ url: `/disputes/${encodeURIComponent(disputeId)}`, method: "PATCH", body }),
+      invalidatesTags: (_result, _error, { bookingId }) => (bookingId ? [{ type: "Booking", id: `DISPUTES-${bookingId}` }] : []),
     }),
     createVendorReport: builder.mutation<ReportResponse, CreateReportRequest>({
       query: (body) => ({ url: "/reports", method: "POST", body }),
@@ -371,7 +405,9 @@ export const {
   useGetVendorBookingQrCodeQuery,
   useScanVendorBookingQrCodeMutation,
   useGetVendorBookingReceiptQuery,
+  useLazyGetVendorBookingReceiptQuery,
   useGetVendorBookingInvoiceQuery,
+  useLazyGetVendorBookingInvoiceQuery,
   useGetVendorWalletQuery,
   useGetVendorWalletTransactionsQuery,
   useGetVendorWalletTransactionQuery,
@@ -384,8 +420,10 @@ export const {
   useMarkVendorNotificationReadMutation,
   useMarkAllVendorNotificationsReadMutation,
   useDeleteVendorNotificationMutation,
+  useGetVendorItemReviewsQuery,
   useAddVendorReviewReplyMutation,
   useEditVendorReviewReplyMutation,
+  useUploadVendorImageMutation,
   useGetVendorInspectionQuery,
   useCreateVendorInspectionMutation,
   useUpdateVendorInspectionMutation,

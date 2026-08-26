@@ -1,6 +1,6 @@
 export interface Category {
-  id: number;
-  parentId?: number | null;
+  id: string;
+  parentId?: string | null;
   name: string;
   slug: string;
   commissionRate?: number;

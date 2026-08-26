@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useGetItemRequestOffersQuery, useGetItemRequestQuery } from "@/redux/services/userApi";
 import { useGetCategoriesQuery } from "@/redux/services/categoryApi";
@@ -85,6 +85,14 @@ const OFFERS: Offer[] = [
 const EXPIRES_IN_SECONDS = 4 * 3600 + 22 * 60 + 15;
 
 export default function RequestDetailPage() {
+  return (
+    <Suspense fallback={null}>
+      <RequestDetailPageContent />
+    </Suspense>
+  );
+}
+
+function RequestDetailPageContent() {
   const searchParams = useSearchParams();
   const requestId = searchParams.get("requestId") || "";
   const { data: request, isLoading: requestLoading } = useGetItemRequestQuery(requestId, { skip: !requestId });
@@ -196,7 +204,7 @@ function getCategoryIcon(categoryName: string) {
   return Tag;
 }
 
-function RequestSummaryCard({ request, loading, categoryName, CategoryIcon }: { request?: { title?: string; categoryId?: number; budgetMin?: number; budgetMax?: number; neededFrom?: string; neededTo?: string; latitude?: number; longitude?: number }; loading: boolean; categoryName: string; CategoryIcon: React.ComponentType<{ className?: string }> }) {
+function RequestSummaryCard({ request, loading, categoryName, CategoryIcon }: { request?: { title?: string; categoryId?: string; budgetMin?: number; budgetMax?: number; neededFrom?: string; neededTo?: string; latitude?: number; longitude?: number }; loading: boolean; categoryName: string; CategoryIcon: React.ComponentType<{ className?: string }> }) {
   return (
     <div className="h-fit rounded-2xl bg-white p-6 shadow-[0_4px_24px_rgba(20,30,60,0.06)]">
       <p className="flex items-center gap-2 text-sm font-semibold text-[#1A2340]">

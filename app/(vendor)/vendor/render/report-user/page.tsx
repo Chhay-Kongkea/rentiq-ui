@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useState } from "react";
+import React, { Suspense, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useCreateVendorReportMutation } from "@/redux/services/vendorApi";
 
@@ -208,6 +208,14 @@ function PhotoUploadGrid({
 }
 
 export default function ReportUser() {
+  return (
+    <Suspense fallback={null}>
+      <ReportUserContent />
+    </Suspense>
+  );
+}
+
+function ReportUserContent() {
   const searchParams = useSearchParams();
   const reportedUserId = searchParams.get("userId") || "";
   const [createReport, createReportState] = useCreateVendorReportMutation();

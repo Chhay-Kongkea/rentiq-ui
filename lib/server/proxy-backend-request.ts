@@ -16,6 +16,7 @@ function getBackendApiBaseUrl(): URL {
 export async function proxyBackendRequest(
   request: Request,
   backendPath: string,
+  options?: { forwardHeaders?: string[] },
 ): Promise<Response> {
   try {
     const session = await auth();
@@ -35,6 +36,10 @@ export async function proxyBackendRequest(
     if (contentLength) headers.set("content-length", contentLength);
     if (session?.accessToken) {
       headers.set("authorization", `Bearer ${session.accessToken}`);
+    }
+    for (const headerName of options?.forwardHeaders ?? []) {
+      const value = request.headers.get(headerName);
+      if (value) headers.set(headerName, value);
     }
 
     const method = request.method.toUpperCase();

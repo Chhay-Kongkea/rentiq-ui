@@ -64,7 +64,7 @@ export interface UserReview {
 
 export interface UserItemRequest {
   id: string;
-  categoryId?: number;
+  categoryId?: string;
   title?: string;
   description?: string;
   status?: string;

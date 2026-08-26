@@ -1,4 +1,5 @@
 "use client";
+import { Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useGetItemRequestQuery } from "@/redux/services/userApi";
@@ -58,6 +59,14 @@ const steps = [
 ];
 
 export default function RequestSuccessPage() {
+  return (
+    <Suspense fallback={null}>
+      <RequestSuccessPageContent />
+    </Suspense>
+  );
+}
+
+function RequestSuccessPageContent() {
   const searchParams = useSearchParams();
   const requestId = searchParams.get("requestId") || "";
   const { data: request, isLoading } = useGetItemRequestQuery(requestId, { skip: !requestId });

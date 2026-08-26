@@ -93,7 +93,7 @@ export interface VendorEarningsReportResponse {
 }
 
 export interface CreateItemRequest {
-  categoryId: number;
+  categoryId: string;
   title: string;
   description?: string;
   condition: ItemCondition;
@@ -196,17 +196,30 @@ export interface InspectionImageResponse {
 
 export interface InspectionImageInput {
   imageName: string;
-  type: string;
+  type: "CHECK_IN" | "CHECK_OUT";
 }
 
 export interface AddInspectionImagesRequest {
   images: InspectionImageInput[];
 }
 
+export interface ImageUploadResponse {
+  id: string;
+  imageUrl?: string;
+  thumbnailUrl?: string;
+  publicId?: string;
+  assetId?: string;
+  folder?: string;
+  originalFilename?: string;
+  contentType?: string;
+  fileSize?: number;
+  createdAt?: string;
+}
+
 export interface ItemRequestResponse {
   id: string;
   customerId?: string;
-  categoryId?: number;
+  categoryId?: string;
   title?: string;
   description?: string;
   budgetMin?: number;
@@ -225,7 +238,7 @@ export interface ItemRequestResponse {
 
 export interface ItemRequestFilter {
   keyword?: string;
-  categoryId?: number;
+  categoryId?: string;
   budgetMin?: number;
   budgetMax?: number;
   status?: "OPEN" | "MATCHED" | "CANCELLED" | "EXPIRED";

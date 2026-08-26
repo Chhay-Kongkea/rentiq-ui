@@ -25,6 +25,6 @@ export const itemApi = api.injectEndpoints({
       ],
     }),
   }),
-}, { overrideExisting: true });
+});
 
 export const { useGetItemsQuery, useGetItemQuery } = itemApi;
