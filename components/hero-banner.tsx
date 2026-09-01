@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BANNER_IMAGES } from "./home-content.data";
+import { BANNER_SLIDES } from "./home-content.data";
 
 const AUTOPLAY_DELAY = 3000;
 
@@ -13,7 +13,7 @@ export default function HomeBanner() {
   useEffect(() => {
     if (paused) return;
     const interval = window.setInterval(() => {
-      setCurrentIndex((index) => (index + 1) % BANNER_IMAGES.length);
+      setCurrentIndex((index) => (index + 1) % BANNER_SLIDES.length);
     }, AUTOPLAY_DELAY);
     return () => window.clearInterval(interval);
   }, [paused]);
@@ -31,11 +31,11 @@ export default function HomeBanner() {
           className="flex h-full transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none"
           style={{ transform: `translateX(-${currentIndex * 100}%)` }}
         >
-          {BANNER_IMAGES.map((image, index) => (
-            <div key={image} className="h-full w-full shrink-0">
+          {BANNER_SLIDES.map((slide) => (
+            <div key={slide.image} className="h-full w-full shrink-0">
               <img
-                src={image}
-                alt={`Featured rental banner ${index + 1}`}
+                src={slide.image}
+                alt={slide.alt}
                 className="h-full w-full object-cover"
                 draggable={false}
               />
@@ -45,12 +45,10 @@ export default function HomeBanner() {
 
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/30 to-transparent" />
 
-
-
         <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full bg-black/20 px-3 py-2 backdrop-blur-sm">
-          {BANNER_IMAGES.map((image, index) => (
+          {BANNER_SLIDES.map((slide, index) => (
             <button
-              key={image}
+              key={slide.image}
               type="button"
               onClick={() => setCurrentIndex(index)}
               aria-label={`Show banner ${index + 1}`}

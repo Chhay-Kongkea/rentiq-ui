@@ -316,8 +316,8 @@ export default function UserProfilePage() {
                 <span className="text-xs font-bold text-emerald-500">
                   Notification emails: {notificationPreferences?.emailNotifications ? "On" : "Off"}
                 </span>
-                <a
-                  href="#"
+                <Link
+                  href="/user/profile/my-booking"
                   className="flex items-center gap-1 text-xs font-bold text-red-500 hover:underline"
                 >
                   View Bookings
@@ -325,7 +325,7 @@ export default function UserProfilePage() {
                     icon={faChevronRight}
                     className="h-2.5 w-2.5"
                   />
-                </a>
+                </Link>
               </div>
             </section>
           </aside>

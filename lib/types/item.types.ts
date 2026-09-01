@@ -43,13 +43,29 @@ export interface Item {
 }
 
 export interface ItemsResponse {
-  content?: Item[];
+  content: Item[];
+  pageNumber: number;
+  pageSize: number;
+  totalElements: number;
+  totalPages: number;
+  first: boolean;
+  last: boolean;
+  hasNext: boolean;
+  hasPrevious: boolean;
+}
+
+export interface PublicItemQuery {
+  keyword?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  categoryId?: string;
+  condition?: ItemCondition;
+  available?: boolean;
+  featured?: boolean;
+  location?: string;
+  minimumRating?: number;
   pageNumber?: number;
   pageSize?: number;
-  totalElements?: number;
-  totalPages?: number;
-  first?: boolean;
-  last?: boolean;
-  hasNext?: boolean;
-  hasPrevious?: boolean;
+  sortBy?: string;
+  sortDirection?: "asc" | "desc";
 }

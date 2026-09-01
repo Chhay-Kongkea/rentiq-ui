@@ -16,9 +16,17 @@ export const FEATURED_RENTALS = [
   { id: 4, category: "TOOLS", image: "/img/makita-tools.png", title: "Makita Drill Set", location: "BKK1, Phnom Penh", rating: 4.5, price: 60 },
 ] as const;
 
-export const BANNER_IMAGES = [
-  "/img/banner.png",
-  "/img/banner-car-rentals.png",
-  "/img/banner1.png",
-  "/img/banner-outdoor-rentals.png",
+export const BANNER_SLIDES = [
+  { image: "/img/banner.png", alt: "Home rentals promotion" },
+  {
+    image: "/img/banner-car-rentals-royal-palace.png",
+    alt: "Cambodian car and remorque tuk-tuk at the Royal Palace in Phnom Penh",
+  },
+  { image: "/img/banner1.png", alt: "Traditional clothing rentals" },
+  {
+    image: "https://www.guidetrip.info/asset/img/gallery_album/63f385a51dbc7.jpeg",
+    alt: "Tents camping among pine trees at Camping Park Kirirom, Cambodia",
+    location: "Camping Park Kirirom · Kampong Speu, Cambodia",
+    creditUrl: "https://www.guidetrip.info/place/camping-park-kirirom",
+  },
 ] as const;

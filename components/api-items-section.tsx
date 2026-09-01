@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useMemo } from "react";
 import RentalCard from "@/components/rental-card";
 import type { Item } from "@/lib/types/item.types";
+import { useGetCategoriesQuery } from "@/redux/services/categoryApi";
 import { useGetItemsQuery } from "@/redux/services/itemApi";
 
 const FALLBACK_IMAGE = "/img/electronics.png";
@@ -15,7 +17,13 @@ function getImage(item: Item) {
 }
 
 export default function ApiItemsSection() {
-  const { data: items = [], isLoading, isError, refetch } = useGetItemsQuery();
+  const { data, isLoading, isError, refetch } = useGetItemsQuery({ pageNumber: 0, pageSize: 4, available: true });
+  const { data: categories = [] } = useGetCategoriesQuery();
+  const items = data?.content ?? [];
+  const categoryNames = useMemo(
+    () => new Map(categories.map((category) => [String(category.id), category.name])),
+    [categories],
+  );
 
   return (
     <section className="mx-auto w-full max-w-7xl py-10">
@@ -43,7 +51,7 @@ export default function ApiItemsSection() {
       ) : (
         <div className="grid grid-cols-1 justify-items-center gap-6 px-[18px] sm:grid-cols-2 sm:px-8 md:grid-cols-3 lg:grid-cols-4">
           {items.map((item) => (
-            <RentalCard key={item.id} id={item.id} category={item.categoryId ? `Category ${item.categoryId}` : "Rental"} image={getImage(item)} title={item.title ?? "Untitled item"} location={item.locationText ?? "Location unavailable"} rating={item.averageRating ?? 0} price={item.pricePerDay ?? 0} />
+            <RentalCard key={item.id} id={item.id} category={item.categoryId ? categoryNames.get(String(item.categoryId)) ?? "Rental" : "Rental"} image={getImage(item)} title={item.title ?? "Untitled item"} location={item.locationText ?? "Location unavailable"} rating={item.averageRating ?? 0} price={item.pricePerDay ?? 0} />
           ))}
         </div>
       )}

@@ -1,5 +1,5 @@
 "use client";
-import { Suspense } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useGetItemRequestQuery } from "@/redux/services/userApi";
@@ -40,6 +40,13 @@ type RequestSummary = {
   location: string;
 };
 
+function formatDate(value?: string) {
+  if (!value) return "Not specified";
+  const date = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(date);
+}
+
 const steps = [
   {
     number: 1,
@@ -70,9 +77,9 @@ function RequestSuccessPageContent() {
   const searchParams = useSearchParams();
   const requestId = searchParams.get("requestId") || "";
   const { data: request, isLoading } = useGetItemRequestQuery(requestId, { skip: !requestId });
-  const { data: categories = [] } = useGetCategoriesQuery();
-  const categoryName = categories.find((category) => category.id === request?.categoryId)?.name || "Rental item";
-  const CategoryIcon = getCategoryIcon(categoryName);
+  const { data: categories = [], isLoading: categoriesLoading } = useGetCategoriesQuery();
+  const categoryName = categories.find((category) => category.id === request?.categoryId)?.name;
+  const CategoryIcon = getCategoryIcon(categoryName || "Rental item");
   return (
     <div className="min-h-screen bg-[#F2F4F7] text-[#1A2340]">
       {/* <SiteHeader />
@@ -106,7 +113,7 @@ function RequestSuccessPageContent() {
             <SummaryRow
               icon={CategoryIcon}
               label="Item Category"
-              value={request ? `Category #${request.categoryId ?? "ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â"} Ãƒâ€šÃ‚Â· ${request.title || "Rental request"}` : isLoading ? "Loading..." : "Request details unavailable"}
+              value={request ? categoriesLoading ? "Loading category..." : `${categoryName || "Category unavailable"}${request.title ? ` · ${request.title}` : ""}` : isLoading ? "Loading..." : "Request details unavailable"}
             />
             <SummaryRow
               icon={Banknote}
@@ -116,13 +123,9 @@ function RequestSuccessPageContent() {
             <SummaryRow
               icon={CalendarDays}
               label="Rental Dates"
-              value={request ? `${request.neededFrom || ""} ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“ ${request.neededTo || ""}` : "ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â"}
+              value={request ? `From ${formatDate(request.neededFrom)} to ${formatDate(request.neededTo)}` : "Not specified"}
             />
-            <SummaryRow
-              icon={MapPin}
-              label="Location"
-              value={request ? `${request.latitude?.toFixed?.(5) ?? ""}, ${request.longitude?.toFixed?.(5) ?? ""}` : "ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â"}
-            />
+            <LocationSummary latitude={request?.latitude} longitude={request?.longitude} loading={isLoading} />
           </div>
         </div>
 
@@ -204,6 +207,28 @@ function SummaryRow({
       </div>
     </div>
   );
+}
+
+function LocationSummary({ latitude, longitude, loading }: { latitude?: number; longitude?: number; loading: boolean }) {
+  const coordinates = latitude != null && longitude != null ? `${latitude.toFixed(5)}, ${longitude.toFixed(5)}` : "Location unavailable";
+  const [location, setLocation] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (latitude == null || longitude == null) return;
+    const controller = new AbortController();
+    fetch(`/api/geocode/reverse?lat=${encodeURIComponent(latitude)}&lng=${encodeURIComponent(longitude)}`, { signal: controller.signal })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Reverse geocoding failed");
+        return response.json() as Promise<{ label?: string }>;
+      })
+      .then((result) => setLocation(result.label || coordinates))
+      .catch((error: unknown) => {
+        if (!(error instanceof DOMException && error.name === "AbortError")) setLocation(coordinates);
+      });
+    return () => controller.abort();
+  }, [coordinates, latitude, longitude]);
+
+  return <SummaryRow icon={MapPin} label="Location" value={loading ? "Loading..." : location || (latitude != null && longitude != null ? "Finding village..." : coordinates)} />;
 }
 
 function PromoBanner() {

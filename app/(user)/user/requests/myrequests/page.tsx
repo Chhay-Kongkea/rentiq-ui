@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useGetMyItemRequestsQuery } from "@/redux/services/userApi";
 import Link from "next/link";
 import {
@@ -16,17 +16,6 @@ import {
   MapPin,
   ChevronLeft,
   ChevronRight,
-  Video,
-  Car,
-  Drill,
-  Headphones,
-  User,
-  Clock,
-  MessageCircle,
-  Share2,
-  Camera,
-  Music2,
-  PlayCircle,
 } from "lucide-react";
 
 type Status = "Urgent" | "Active";
@@ -39,6 +28,8 @@ type RequestCard = {
   dates: string;
   location: string;
   locationUrl?: string;
+  latitude?: number;
+  longitude?: number;
   status: Status;
   icon: React.ComponentType<{ className?: string }>;
   iconBg: string;
@@ -47,99 +38,34 @@ type RequestCard = {
 };
 
 const TABS = [
-  { key: "open", label: "Open", count: 12 },
-  { key: "booked", label: "Booked", count: 4 },
-  { key: "closed", label: "Closed", count: 28 },
-  { key: "expired", label: "Expired", count: 2 },
+  { key: "open", label: "Open" },
+  { key: "booked", label: "Booked" },
+  { key: "closed", label: "Closed" },
+  { key: "expired", label: "Expired" },
 ] as const;
 
 type TabKey = (typeof TABS)[number]["key"];
+const STATUS_BY_TAB: Record<TabKey, string> = { open: "OPEN", booked: "MATCHED", closed: "CANCELLED", expired: "EXPIRED" };
 
 // How many cards to show per page. Swap this for whatever page size your
 // API uses, or read it from a query param if you want it user-configurable.
 const PAGE_SIZE = 6;
-
-// Template cards used to synthesize demo data per tab/page. Replace this
-// entire block with a real fetch (e.g. `fetchRequests({ tab, page })`)
-// that returns { items, totalCount } from your API.
-const REQUEST_TEMPLATES: Omit<RequestCard, "id">[] = [
-  {
-    title: "Cinema Camera Rig",
-    description:
-      "Looking for a RED or ARRI kit for a 3-day indie film shoot in Downtown.",
-    budget: "$200 - $350 / day",
-    dates: "Oct 12 - Oct 15",
-    location: "Downtown Manhattan, NY",
-    status: "Urgent",
-    icon: Video,
-    iconBg: "bg-[#3E3226]",
-    offerCount: 8,
-    offerAvatars: 3,
-  },
-  {
-    title: "Tesla Model 3",
-    description:
-      "Need a clean EV for a weekend road trip. Preferred with FSD enabled if...",
-    budget: "$200 - $350 / day",
-    dates: "Oct 12 - Oct 15",
-    location: "Downtown Manhattan, NY",
-    status: "Active",
-    icon: Car,
-    iconBg: "bg-[#7A1F1F]",
-    offerCount: 2,
-    offerAvatars: 2,
-  },
-  {
-    title: "Heavy Duty Jackhammer",
-    description:
-      "Driveway renovation project. Need a reliable electric jackhammer for one...",
-    budget: "$200 - $350 / day",
-    dates: "Oct 12 - Oct 15",
-    location: "Downtown Manhattan, NY",
-    status: "Active",
-    icon: Drill,
-    iconBg: "bg-[#D9D9D9]",
-    offerCount: 0,
-    offerAvatars: 0,
-  },
-  {
-    title: "DJ Deck & Speakers",
-    description:
-      "Need a Pioneer CDJ set and two high-powered PA speakers for a private...",
-    budget: "$200 - $350 / day",
-    dates: "Oct 12 - Oct 15",
-    location: "Downtown Manhattan, NY",
-    status: "Active",
-    icon: Headphones,
-    iconBg: "bg-[#1F2937]",
-    offerCount: 1,
-    offerAvatars: 1,
-  },
-];
-
-// Builds a page's worth of demo cards for a given tab. Replace with a real
-// data fetch keyed by (tabKey, page) ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â this only exists so pagination has
-// something to visibly page through.
-function getRequestsForPage(tabKey: TabKey, page: number): RequestCard[] {
-  const tab = TABS.find((t) => t.key === tabKey)!;
-  const start = (page - 1) * PAGE_SIZE;
-  const count = Math.max(0, Math.min(PAGE_SIZE, tab.count - start));
-
-  return Array.from({ length: count }, (_, i) => {
-    const template = REQUEST_TEMPLATES[(start + i) % REQUEST_TEMPLATES.length];
-    return { ...template, id: `${tabKey}-${start + i + 1}` };
-  });
-}
 
 export default function MyRequestsPage() {
   const [activeTab, setActiveTab] = useState<TabKey>("open");
   const [page, setPage] = useState(1);
 
   const { data: requestPage, isLoading, isError } = useGetMyItemRequestsQuery({ pageNumber: 0, pageSize: 100 });
-  const apiRequests = requestPage?.content ?? [];
-  const statusByTab: Record<TabKey, string> = { open: "OPEN", booked: "MATCHED", closed: "CANCELLED", expired: "EXPIRED" };
-  const activeTabMeta = { ...TABS.find((t) => t.key === activeTab)!, count: apiRequests.filter((request) => request.status === statusByTab[activeTab]).length };
-  const requests = useMemo(() => apiRequests.filter((request) => request.status === statusByTab[activeTab]).slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE).map((request) => ({ id: request.id, title: request.title || "Rental request", description: request.description || "", budget: request.budgetMin != null || request.budgetMax != null ? `${request.budgetMin ?? 0} - ${request.budgetMax ?? 0}` : "Budget not specified", dates: [request.neededFrom, request.neededTo].filter(Boolean).join(" - ") || "Dates flexible", location: request.location || (request.latitude != null && request.longitude != null ? `Pinned: ${request.latitude.toFixed(5)}, ${request.longitude.toFixed(5)}` : "Location not specified"), locationUrl: request.latitude != null && request.longitude != null ? `https://www.google.com/maps?q=${request.latitude},${request.longitude}` : undefined, status: request.status === "OPEN" ? "Active" : "Urgent", icon: Tag, iconBg: "bg-[#253C95]", offerCount: request.offerCount || 0, offerAvatars: Math.min(request.offerCount || 0, 3) } as RequestCard)), [apiRequests, activeTab, page]);
+  const apiRequests = useMemo(() => requestPage?.content ?? [], [requestPage?.content]);
+  const tabCounts: Record<TabKey, number> = {
+    open: apiRequests.filter((request) => request.status === STATUS_BY_TAB.open).length,
+    booked: apiRequests.filter((request) => request.status === STATUS_BY_TAB.booked).length,
+    closed: apiRequests.filter((request) => request.status === STATUS_BY_TAB.closed).length,
+    expired: apiRequests.filter((request) => request.status === STATUS_BY_TAB.expired).length,
+  };
+  const activeTabMeta = { ...TABS.find((tab) => tab.key === activeTab)!, count: tabCounts[activeTab] };
+  const requests = useMemo(() => apiRequests.filter((request) => request.status === STATUS_BY_TAB[activeTab]).slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE).map((request) => ({ id: request.id, title: request.title || "Rental request", description: request.description || "", budget: request.budgetMin != null || request.budgetMax != null ? `${request.budgetMin ?? 0} - ${request.budgetMax ?? 0}` : "Budget not specified", dates: [request.neededFrom, request.neededTo].filter(Boolean).join(" - ") || "Dates flexible", location: request.location || (request.latitude != null && request.longitude != null ? `${request.latitude.toFixed(5)}, ${request.longitude.toFixed(5)}` : "Location not specified"), locationUrl: request.latitude != null && request.longitude != null ? `https://www.google.com/maps?q=${request.latitude},${request.longitude}` : undefined, latitude: request.latitude, longitude: request.longitude, status: request.status === "OPEN" ? "Active" : "Urgent", icon: Tag, iconBg: "bg-[#253C95]", offerCount: request.offerCount || 0, offerAvatars: Math.min(request.offerCount || 0, 3) } as RequestCard)), [apiRequests, activeTab, page]);
+  const resolvedLocations = useRequestLocations(requests);
   const totalPages = Math.max(1, Math.ceil(activeTabMeta.count / PAGE_SIZE));
 
   function handleTabChange(tab: TabKey) {
@@ -191,7 +117,7 @@ export default function MyRequestsPage() {
                       : "bg-gray-100 text-gray-500"
                   }`}
                 >
-                  {tab.count}
+                  {tabCounts[tab.key]}
                 </span>
               </button>
             );
@@ -200,7 +126,7 @@ export default function MyRequestsPage() {
 
         <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {isLoading ? <p className="col-span-full py-12 text-center text-sm text-gray-500">Loading requests...</p> : isError ? <p className="col-span-full py-12 text-center text-sm text-red-500">Unable to load requests.</p> : requests.map((request) => (
-            <RequestListCard key={request.id} request={request} />
+            <RequestListCard key={request.id} request={request} resolvedLocation={resolvedLocations[request.id]} />
           ))}
         </div>
 
@@ -216,18 +142,48 @@ export default function MyRequestsPage() {
   );
 }
 
-function RequestListCard({ request }: { request: RequestCard }) {
+function RequestListCard({ request, resolvedLocation }: { request: RequestCard; resolvedLocation?: string }) {
   const Icon = request.icon;
   const statusStyles = request.status === "Urgent" ? "bg-emerald-50 text-emerald-700" : "bg-blue-50 text-[#253C95]";
   return (
     <article className="group flex min-h-[390px] flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-lg">
       <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4"><span className={`flex h-11 w-11 items-center justify-center rounded-xl text-white shadow-sm ${request.iconBg}`}><Icon className="h-5 w-5" /></span><span className={`rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide ${statusStyles}`}>{request.status}</span></div>
       <div className="flex flex-1 flex-col px-5 py-5"><h3 className="line-clamp-1 text-lg font-bold tracking-tight text-[#1A2340]">{request.title}</h3><p className="mt-2 line-clamp-2 min-h-10 text-sm leading-5 text-slate-500">{request.description || "No description provided."}</p>
-        <dl className="mt-5 space-y-3 rounded-xl bg-slate-50 p-3.5"><div className="flex items-center gap-3 text-sm text-slate-600"><Banknote className="h-4 w-4 text-[#253C95]" /><span className="truncate">{request.budget}</span></div><div className="flex items-center gap-3 text-sm text-slate-600"><CalendarDays className="h-4 w-4 text-[#253C95]" /><span className="truncate">{request.dates}</span></div><div className="flex items-center gap-3 text-sm text-slate-600"><MapPin className="h-4 w-4 shrink-0 text-[#F73030]" />{request.locationUrl ? <a href={request.locationUrl} target="_blank" rel="noreferrer" className="truncate font-medium text-[#253C95] underline-offset-2 hover:underline">{request.location}</a> : <span className="truncate">{request.location}</span>}</div></dl>
+        <dl className="mt-5 space-y-3 rounded-xl bg-slate-50 p-3.5"><div className="flex items-center gap-3 text-sm text-slate-600"><Banknote className="h-4 w-4 text-[#253C95]" /><span className="truncate">{request.budget}</span></div><div className="flex items-center gap-3 text-sm text-slate-600"><CalendarDays className="h-4 w-4 text-[#253C95]" /><span className="truncate">{request.dates}</span></div><div className="flex items-center gap-3 text-sm text-slate-600"><MapPin className="h-4 w-4 shrink-0 text-[#F73030]" />{request.locationUrl ? <a href={request.locationUrl} target="_blank" rel="noreferrer" className="truncate font-medium text-[#253C95] underline-offset-2 hover:underline">{resolvedLocation || "Finding village..."}</a> : <span className="truncate">{request.location}</span>}</div></dl>
         <div className="mt-auto flex items-end justify-between gap-3 pt-5"><div><p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Offers received</p><p className="mt-1 text-sm font-semibold text-slate-700">{request.offerCount} {request.offerCount === 1 ? "offer" : "offers"}</p></div><Link href={`/user/requests/requests_detail?requestId=${request.id}`} className="rounded-lg bg-[#F73030] px-3.5 py-2 text-xs font-bold text-white transition hover:bg-[#dd2b2b]">{request.offerCount ? "View offers" : "View request"}</Link></div>
       </div>
     </article>
   );
+}
+
+function useRequestLocations(requests: RequestCard[]) {
+  const [locations, setLocations] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    const request = requests.find((entry) => entry.latitude != null && entry.longitude != null && !locations[entry.id]);
+    if (!request || request.latitude == null || request.longitude == null) return;
+    const controller = new AbortController();
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    fetch(`/api/geocode/reverse?lat=${encodeURIComponent(request.latitude)}&lng=${encodeURIComponent(request.longitude)}`, { signal: controller.signal })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Reverse geocoding failed");
+        return response.json() as Promise<{ label?: string }>;
+      })
+      .then((result) => {
+        timer = setTimeout(() => setLocations((current) => ({ ...current, [request.id]: result.label || request.location })), 1100);
+      })
+      .catch((error: unknown) => {
+        if (!(error instanceof DOMException && error.name === "AbortError")) timer = setTimeout(() => setLocations((current) => ({ ...current, [request.id]: request.location })), 1100);
+      });
+
+    return () => {
+      controller.abort();
+      if (timer) clearTimeout(timer);
+    };
+  }, [locations, requests]);
+
+  return locations;
 }
 // Standard "windowed" pagination range: always shows first, last, the
 // current page ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â± siblingCount, and collapses everything else into a

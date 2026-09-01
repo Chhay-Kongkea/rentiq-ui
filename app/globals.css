@@ -99,39 +99,39 @@
   --sidebar-ring: oklch(0.708 0 0);
 }
 
-/* Mid-dark palette: approximately 50% lightness for comfortable dark mode. */
+/* High-contrast navy palette with distinct page, surface, and control layers. */
 .dark {
-  --background: oklch(0.30 0.035 255);
-  --foreground: oklch(0.97 0.015 255);
-  --card: oklch(0.38 0.035 255);
-  --card-foreground: oklch(0.97 0.015 255);
-  --popover: oklch(0.38 0.035 255);
-  --popover-foreground: oklch(0.97 0.015 255);
-  --primary: oklch(0.90 0.02 255);
-  --primary-foreground: oklch(0.24 0.035 255);
-  --secondary: oklch(0.46 0.035 255);
-  --secondary-foreground: oklch(0.97 0.015 255);
-  --muted: oklch(0.46 0.035 255);
-  --muted-foreground: oklch(0.82 0.02 255);
-  --accent: oklch(0.46 0.035 255);
-  --accent-foreground: oklch(0.97 0.015 255);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 22%);
-  --input: oklch(1 0 0 / 25%);
-  --ring: oklch(0.76 0.035 255);
+  --background: oklch(0.17 0.028 255);
+  --foreground: oklch(0.96 0.012 255);
+  --card: oklch(0.225 0.03 255);
+  --card-foreground: oklch(0.96 0.012 255);
+  --popover: oklch(0.205 0.03 255);
+  --popover-foreground: oklch(0.96 0.012 255);
+  --primary: oklch(0.72 0.14 260);
+  --primary-foreground: oklch(0.99 0 0);
+  --secondary: oklch(0.66 0.21 25);
+  --secondary-foreground: oklch(0.99 0 0);
+  --muted: oklch(0.285 0.032 255);
+  --muted-foreground: oklch(0.74 0.025 255);
+  --accent: oklch(0.31 0.045 255);
+  --accent-foreground: oklch(0.97 0.012 255);
+  --destructive: oklch(0.68 0.2 25);
+  --border: oklch(0.72 0.03 255 / 22%);
+  --input: oklch(0.72 0.03 255 / 28%);
+  --ring: oklch(0.72 0.14 260);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.65 0.035 255);
   --chart-3: oklch(0.55 0.035 255);
   --chart-4: oklch(0.46 0.035 255);
   --chart-5: oklch(0.38 0.035 255);
-  --sidebar: oklch(0.35 0.035 255);
-  --sidebar-foreground: oklch(0.97 0.015 255);
-  --sidebar-primary: oklch(0.65 0.12 255);
-  --sidebar-primary-foreground: oklch(0.97 0.015 255);
-  --sidebar-accent: oklch(0.46 0.035 255);
-  --sidebar-accent-foreground: oklch(0.97 0.015 255);
-  --sidebar-border: oklch(1 0 0 / 22%);
-  --sidebar-ring: oklch(0.76 0.035 255);
+  --sidebar: oklch(0.205 0.03 255);
+  --sidebar-foreground: oklch(0.96 0.012 255);
+  --sidebar-primary: oklch(0.72 0.14 260);
+  --sidebar-primary-foreground: oklch(0.99 0 0);
+  --sidebar-accent: oklch(0.285 0.032 255);
+  --sidebar-accent-foreground: oklch(0.96 0.012 255);
+  --sidebar-border: oklch(0.72 0.03 255 / 22%);
+  --sidebar-ring: oklch(0.72 0.14 260);
 }@layer base {
   * {
     @apply border-border;
@@ -221,7 +221,6 @@
 .dark .bg-\[\#f0efec\],
 .dark .bg-\[\#f3f1ee\],
 .dark .bg-\[\#f3edea\],
-.dark .bg-\[\#F2F4F7\],
 .dark .bg-\[\#F3F4F6\],
 .dark .bg-\[\#F4F4F6\],
 .dark .bg-\[\#eef1fb\],
@@ -231,6 +230,14 @@
 .dark .bg-\[\#E4EBFB\],
 .dark .bg-\[\#E6ECFA\] {
   background-color: var(--muted) !important;
+}
+
+.dark .bg-\[\#F2F4F7\],
+.dark .bg-\[\#f7f7f8\],
+.dark .bg-\[\#f7f8fb\],
+.dark .bg-\[\#f7f8fd\],
+.dark .bg-\[\#f8fafc\] {
+  background-color: var(--background) !important;
 }
 
 .dark .text-black,
@@ -295,7 +302,47 @@
 .dark input,
 .dark textarea,
 .dark select {
+  background-color: var(--muted) !important;
+  border-color: var(--border) !important;
+  color: var(--foreground) !important;
   color-scheme: dark;
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: var(--muted-foreground) !important;
+  opacity: 1;
+}
+
+.dark .text-\[\#253C95\],
+.dark .text-\[\#1A2E6B\] {
+  color: oklch(0.76 0.13 260) !important;
+}
+
+.dark .text-\[\#F73030\],
+.dark .text-\[\#E8402C\],
+.dark .text-\[\#FF2B2B\] {
+  color: oklch(0.72 0.19 25) !important;
+}
+
+.dark [data-slot="dropdown-menu-content"] {
+  background-color: var(--popover) !important;
+  color: var(--popover-foreground) !important;
+  border-color: var(--border) !important;
+  box-shadow: 0 18px 45px rgb(0 0 0 / 42%);
+}
+
+.dark [data-slot="dropdown-menu-item"]:focus,
+.dark [data-slot="dropdown-menu-item"][data-highlighted] {
+  background-color: var(--accent) !important;
+  color: var(--accent-foreground) !important;
+}
+
+.dark .shadow-sm,
+.dark .shadow-md,
+.dark .shadow-lg,
+.dark .shadow-xl {
+  --tw-shadow-color: rgb(0 0 0 / 35%);
 }
 
 .dark header {

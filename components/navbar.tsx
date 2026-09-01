@@ -10,6 +10,7 @@ import { useSession } from "next-auth/react";
 import { logout } from "@/app/actions/auth";
 import { loginWithKeycloak } from "@/app/(auth)/login/actions";
 import { useGetCategoriesQuery } from "@/redux/services/categoryApi";
+import { useGetMyBookingsQuery } from "@/redux/services/renterApi";
 
 // Lucide Icons
 import {
@@ -89,6 +90,7 @@ const pathname = usePathname();
   const { data: searchCategories = [] } = useGetCategoriesQuery();
   const { data: session, status } = useSession();
   const isLoggedIn = status === "authenticated";
+  const { data: bookings = [] } = useGetMyBookingsQuery(undefined, { skip: !isLoggedIn });
   const displayName = session?.user?.name ?? session?.user?.email ?? "User";
   const initials = getInitials(session?.user?.name, session?.user?.email);
 
@@ -318,14 +320,12 @@ const pathname = usePathname();
                     <DropdownMenuSeparator className="m-0 bg-gray-100" />
 
                     <DropdownMenuGroup>
-                      <DropdownMenuItem className="flex cursor-pointer items-center justify-between rounded-lg px-3 py-2.5 text-gray-700 focus:bg-gray-50">
+                      <DropdownMenuItem render={<Link href="/user/profile/my-booking" />} className="flex cursor-pointer items-center justify-between rounded-lg px-3 py-2.5 text-gray-700 focus:bg-gray-50">
                         <div className="flex items-center gap-3">
                           <Calendar className="size-4 text-gray-600" />
                           <span>My Bookings</span>
                         </div>
-                        <span className="flex size-5 items-center justify-center rounded-full bg-red-600 text-[10px] font-bold text-white">
-                          2
-                        </span>
+                        {bookings.length > 0 ? <span className="flex min-w-5 items-center justify-center rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] font-bold text-white">{bookings.length}</span> : null}
                       </DropdownMenuItem>
 
                       <DropdownMenuItem onClick={() => router.push("/user/favorites")} className="cursor-pointer gap-3 rounded-lg px-3 py-2.5 text-gray-700 focus:bg-gray-50">

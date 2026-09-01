@@ -3,6 +3,9 @@
 import React, { useState } from "react";
 import { MapPin, Star, Heart, ShoppingCart } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { useAddFavoriteMutation, useGetFavoritesQuery, useRemoveFavoriteMutation } from "@/redux/services/renterApi";
 
 interface RentalCardProps {
   id?: string;
@@ -13,10 +16,11 @@ interface RentalCardProps {
   rating: number;
   price: number;
   period?: string;
+  wishlistMode?: boolean;
 }
 
 export default function RentalCard({
-  id = "1",
+  id,
   category,
   image,
   title,
@@ -24,12 +28,66 @@ export default function RentalCard({
   rating,
   price,
   period = "day",
+  wishlistMode = false,
 }: RentalCardProps) {
-  const [isFavorite, setIsFavorite] = useState(false);
+  const router = useRouter();
+  const { status } = useSession();
+  const favoritesParams = { "pageable.page": 0, "pageable.size": 100, "pageable.sort": "favoritedAt,desc" };
+  const { data: favoritesResponse } = useGetFavoritesQuery(favoritesParams, {
+    skip: status !== "authenticated" || !id,
+  });
+  const [addFavorite, { isLoading: isAddingFavorite }] = useAddFavoriteMutation();
+  const [removeFavorite, { isLoading: isRemovingFavorite }] = useRemoveFavoriteMutation();
+  const [favoriteOverride, setFavoriteOverride] = useState<boolean | null>(null);
+  const [favoriteError, setFavoriteError] = useState(false);
+  const isUpdatingFavorite = isAddingFavorite || isRemovingFavorite;
+  const favorites = Array.isArray(favoritesResponse)
+    ? favoritesResponse
+    : Array.isArray((favoritesResponse as { content?: unknown[] } | undefined)?.content)
+      ? (favoritesResponse as { content: unknown[] }).content
+      : [];
+  const apiFavorite = favorites.some((favorite) => {
+    const saved = favorite as { itemId?: string; id?: string; item?: { id?: string } };
+    return saved.itemId === id || saved.item?.id === id || saved.id === id;
+  });
+  const isFavorite = favoriteOverride ?? (wishlistMode || apiFavorite);
+
+  async function toggleFavorite() {
+    if (!id || isUpdatingFavorite) return;
+    if (status !== "authenticated") {
+      router.push("/login");
+      return;
+    }
+
+    const wasFavorite = isFavorite;
+    setFavoriteError(false);
+    setFavoriteOverride(!wasFavorite);
+
+    try {
+      if (wasFavorite) await removeFavorite(id).unwrap();
+      else await addFavorite(id).unwrap();
+    } catch {
+      setFavoriteOverride(wasFavorite);
+      setFavoriteError(true);
+    }
+  }
+
+  async function removeFromWishlist() {
+    if (!id || isUpdatingFavorite) return;
+    setFavoriteError(false);
+    setFavoriteOverride(false);
+
+    try {
+      await removeFavorite(id).unwrap();
+    } catch {
+      setFavoriteOverride(true);
+      setFavoriteError(true);
+    }
+  }
 
   return (
     <Link 
-      href={`/items/${id}`}
+      href={id ? `/items/${id}` : "/items"}
       className="block w-full max-w-[280px]"
     >
       <div className="group relative flex flex-col justify-between rounded-2xl bg-white p-4 shadow-xs transition-all hover:shadow-md border border-neutral-100 w-full cursor-pointer">
@@ -42,12 +100,15 @@ export default function RentalCard({
             type="button" 
             aria-label={isFavorite ? "Remove from favorites" : "Save to favorites"}
             aria-pressed={isFavorite}
-            onClick={(e) => {
+            aria-busy={isUpdatingFavorite}
+            disabled={!id || isUpdatingFavorite}
+            title={favoriteError ? "Unable to update favorites. Please try again." : undefined}
+            onClick={async (e) => {
               e.preventDefault();
               e.stopPropagation();
-              setIsFavorite((favorite) => !favorite);
+              await toggleFavorite();
             }}
-            className={`flex size-9 items-center justify-center rounded-full transition-all active:scale-90 ${
+            className={`flex size-9 items-center justify-center rounded-full transition-all active:scale-90 disabled:cursor-not-allowed disabled:opacity-60 ${
               isFavorite
                 ? "bg-red-50 text-[#FF2B2B]"
                 : "bg-neutral-100 text-neutral-500 hover:text-[#FF2B2B]"
@@ -92,17 +153,32 @@ export default function RentalCard({
             <span className="text-lg font-bold text-[#FF2B2B]">${price}</span>
             <span className="text-xs text-neutral-400">/{period}</span>
           </div>
-          <button 
-            type="button"
-            aria-label="Add to cart"
-            onClick={(e) => {
-              e.preventDefault(); // Prevents navigating to detail page when adding to cart
-              e.stopPropagation();
-            }}
-            className="flex size-9 items-center justify-center rounded-full bg-sky-50 text-[#253C95] transition-colors hover:bg-sky-100"
-          >
-            <ShoppingCart className="size-4" />
-          </button>
+          {wishlistMode ? (
+            <button
+              type="button"
+              disabled={isUpdatingFavorite}
+              onClick={async (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                await removeFromWishlist();
+              }}
+              className="rounded-lg border border-red-100 px-3 py-2 text-xs font-bold text-[#FF2B2B] transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isRemovingFavorite ? "Removing..." : "Remove"}
+            </button>
+          ) : (
+            <button 
+              type="button"
+              aria-label="Add to cart"
+              onClick={(e) => {
+                e.preventDefault(); // Prevents navigating to detail page when adding to cart
+                e.stopPropagation();
+              }}
+              className="flex size-9 items-center justify-center rounded-full bg-sky-50 text-[#253C95] transition-colors hover:bg-sky-100"
+            >
+              <ShoppingCart className="size-4" />
+            </button>
+          )}
         </div>
       </div>
     </Link>

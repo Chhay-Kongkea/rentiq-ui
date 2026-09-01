@@ -3,14 +3,12 @@
 import { useEffect, useRef } from "react";
 import CategoryCard from "@/components/category-card";
 import { useGetCategoriesQuery } from "@/redux/services/categoryApi";
-import { useGetItemsQuery } from "@/redux/services/itemApi";
 
 const FALLBACK_ICON = "/img/electronics.png";
 
 export default function CategoriesSection() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const { data: categories = [], isLoading, isError, refetch } = useGetCategoriesQuery();
-  const { data: items = [] } = useGetItemsQuery();
   const activeCategories = categories.filter((category) => category.active);
 
   useEffect(() => {
@@ -52,10 +50,7 @@ export default function CategoriesSection() {
           <p className="text-center text-sm text-neutral-500">No active categories are available.</p>
         ) : (
           <div ref={scrollRef} className="flex justify-start gap-5 overflow-x-auto [scrollbar-width:none]">
-            {visibleCategories.map((category, index) => {
-              const count = items.filter((item) => item.categoryId === category.id).length;
-              return <div key={`${category.id}-${index}`} className="w-[140px] shrink-0 sm:w-[160px]"><CategoryCard image={category.iconUrl || FALLBACK_ICON} title={category.name} count={`${count} ${count === 1 ? "item" : "items"}`} href={`/items?categoryId=${category.id}`} /></div>;
-            })}
+            {visibleCategories.map((category, index) => <div key={`${category.id}-${index}`} className="w-[140px] shrink-0 sm:w-[160px]"><CategoryCard image={category.iconUrl || FALLBACK_ICON} title={category.name} count="View rentals" href={`/items?categoryId=${category.id}`} /></div>)}
           </div>
         )}
       </div>

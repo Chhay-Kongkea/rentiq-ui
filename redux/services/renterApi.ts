@@ -1,8 +1,20 @@
 import { api } from "@/redux/api";
+import type { BookingResponse } from "@/lib/types/vendor.types";
 
 type Id = string;
 type Body = Record<string, unknown>;
 type PageParams = Record<string, string | number | boolean | undefined>;
+
+function normalizeBookings(response: unknown): BookingResponse[] {
+  if (Array.isArray(response)) return response as BookingResponse[];
+  if (!response || typeof response !== "object") return [];
+
+  const wrapped = response as { content?: unknown; items?: unknown; data?: unknown };
+  if (Array.isArray(wrapped.content)) return wrapped.content as BookingResponse[];
+  if (Array.isArray(wrapped.items)) return wrapped.items as BookingResponse[];
+  if (wrapped.data !== undefined) return normalizeBookings(wrapped.data);
+  return [];
+}
 
 export const renterApi = api.injectEndpoints({
   endpoints: (builder) => ({
@@ -17,7 +29,11 @@ export const renterApi = api.injectEndpoints({
     deleteNotification: builder.mutation<void, Id>({ query: (id) => ({ url: `/notifications/${id}`, method: "DELETE" }), invalidatesTags: ["Renter"] }),
     getUnreadNotificationCount: builder.query<unknown, void>({ query: () => "/notifications/unread-count" }),
 
-    getMyBookings: builder.query<unknown, PageParams | undefined>({ query: (params = {}) => ({ url: "/bookings", params }), providesTags: ["Renter"] }),
+    getMyBookings: builder.query<BookingResponse[], void>({
+      query: () => "/bookings",
+      transformResponse: normalizeBookings,
+      providesTags: ["Renter"],
+    }),
     getBooking: builder.query<unknown, Id>({ query: (id) => `/bookings/${id}` }),
     updateBookingStatus: builder.mutation<unknown, { id: Id; body: Body }>({ query: ({ id, body }) => ({ url: `/bookings/${id}/status`, method: "PATCH", body }), invalidatesTags: ["Renter"] }),
     getBookingStatusHistory: builder.query<unknown, Id>({ query: (id) => `/bookings/${id}/status-history` }),
@@ -59,10 +75,8 @@ export const renterApi = api.injectEndpoints({
 
     getSearchSuggestions: builder.query<unknown, PageParams | undefined>({ query: (params = {}) => ({ url: "/search/suggestions", params }) }),
     searchNearby: builder.query<unknown, PageParams>({ query: (params = {}) => ({ url: "/search/nearby", params }) }),
-    searchItems: builder.query<unknown, PageParams>({ query: (params = {}) => ({ url: "/search/items", params }) }),
     getSearchLogs: builder.query<unknown, PageParams | undefined>({ query: (params = {}) => ({ url: "/search/logs", params }) }),
     getNearbyItems: builder.query<unknown, PageParams>({ query: (params = {}) => ({ url: "/items/nearby", params }) }),
-    getFeaturedItems: builder.query<unknown, PageParams | undefined>({ query: (params = {}) => ({ url: "/items/featured", params }) }),
     getItemReviews: builder.query<unknown, { itemId: Id; params?: PageParams }>({ query: ({ itemId, params }) => ({ url: `/items/${itemId}/reviews`, params }) }),
     getItemAvailability: builder.query<unknown, Id>({ query: (itemId) => `/items/${itemId}/availability` }),
 
@@ -91,7 +105,7 @@ export const {
   useCreateOfferMutation, useGetOfferQuery, useUpdateOfferMutation, useWithdrawOfferMutation, useAcceptOfferMutation, useRejectOfferMutation,
   useGetOpenItemRequestsQuery, useUpdateItemRequestMutation, useCancelItemRequestMutation, useGetNearbyItemRequestsQuery,
   useGetWalletQuery, useGetWalletTransactionsQuery, useGetWalletTransactionQuery, useGetTopupRequestsQuery, useCreateTopupRequestMutation, useGetTopupRequestQuery,
-  useGetSearchSuggestionsQuery, useSearchNearbyQuery, useSearchItemsQuery, useGetSearchLogsQuery, useGetNearbyItemsQuery, useGetFeaturedItemsQuery, useGetItemReviewsQuery, useGetItemAvailabilityQuery,
+  useGetSearchSuggestionsQuery, useSearchNearbyQuery, useGetSearchLogsQuery, useGetNearbyItemsQuery, useGetItemReviewsQuery, useGetItemAvailabilityQuery,
   useGetReviewQuery, useUpdateReviewMutation, useDeleteReviewMutation, useCreateReportMutation, useGetMyReportsQuery, useGetMyReportQuery,
   useUploadImageMutation, useGetImageQuery, useDeleteImageMutation, useGetCategoryQuery, useGetCategoryItemsQuery, useGetCategoryChildrenQuery,
 } = renterApi;

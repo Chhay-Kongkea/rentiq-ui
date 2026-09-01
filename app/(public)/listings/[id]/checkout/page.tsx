@@ -27,7 +27,7 @@ export default function ItemCheckoutPage() {
     setError("");
     try {
       await createBooking({ itemId: id, rentalStart: start, rentalEnd: end }).unwrap();
-      router.push("/user/requests/myrequests");
+      router.push("/user/profile/my-booking");
     } catch { setError("Unable to create the rental request. Please try again."); }
   }
 

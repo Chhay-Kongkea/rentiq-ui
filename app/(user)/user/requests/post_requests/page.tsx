@@ -56,6 +56,19 @@ type FieldKey =
 
 type FormErrors = Partial<Record<FieldKey, string>>;
 
+function apiMessage(error: unknown) {
+  if (typeof error === "object" && error && "data" in error) {
+    const data = (error as { data?: unknown }).data;
+    if (typeof data === "string" && data.trim()) return data;
+    if (typeof data === "object" && data) {
+      const response = data as { message?: string; error?: string; details?: string };
+      return response.message || response.error || response.details || "Unable to post your request. Please check the form and try again.";
+    }
+  }
+  if (error instanceof Error && error.message) return error.message;
+  return "Unable to post your request. Please try again.";
+}
+
 export default function PostRequestPage() {
   const router = useRouter();
   const { data: categories = [] } = useGetCategoriesQuery();
@@ -76,6 +89,7 @@ export default function PostRequestPage() {
 
   const [errors, setErrors] = useState<FormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
 
   function validate(): FormErrors {
     const next: FormErrors = {};
@@ -146,10 +160,13 @@ export default function PostRequestPage() {
     }
 
     setIsSubmitting(true);
+    setSubmitError("");
     try {
       if (!pickupCoordinates) return;
       const createdRequest = await createItemRequest({ categoryId: category, title: itemName.trim(), description: description.trim(), budgetMin: Number(minBudget), budgetMax: Number(maxBudget), neededFrom: startDate, neededTo: endDate, latitude: pickupCoordinates.lat, longitude: pickupCoordinates.lng, radiusKm: 10 }).unwrap();
       router.push(`/user/requests/requests_submit?requestId=${createdRequest.id}`);
+    } catch (error) {
+      setSubmitError(apiMessage(error));
     } finally {
       setIsSubmitting(false);
     }
@@ -381,6 +398,12 @@ export default function PostRequestPage() {
               {isSubmitting ? "Submitting..." : "Submit Request"}
             </button>
           </div>
+          {submitError ? (
+            <p role="alert" className="mt-4 flex items-start gap-2 rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+              <AlertCircle className="mt-0.5 size-4 shrink-0" />
+              {submitError}
+            </p>
+          ) : null}
         </form>
       </main>
     </div>
