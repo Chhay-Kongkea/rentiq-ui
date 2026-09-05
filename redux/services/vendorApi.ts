@@ -58,6 +58,16 @@ const pageableParams = ({ page = 0, size = 20, sort }: Paging = {}) => ({
   ...(sort ? { sort } : {}),
 });
 
+function extractBookingList(response: unknown): BookingResponse[] {
+  if (Array.isArray(response)) return response as BookingResponse[];
+  if (response && typeof response === "object") {
+    const result = response as { content?: unknown; data?: unknown };
+    if (Array.isArray(result.content)) return result.content as BookingResponse[];
+    if (Array.isArray(result.data)) return result.data as BookingResponse[];
+  }
+  return [];
+}
+
 export const vendorApi = api.injectEndpoints({
   endpoints: (builder) => ({
     // Become vendor
@@ -81,11 +91,11 @@ export const vendorApi = api.injectEndpoints({
     }),
     getVendorEarnings: builder.query<
       VendorEarningsReportResponse,
-      { from: string; to?: string; groupBy?: "DAY" | "MONTH"; page?: number; size?: number; sort?: string | string[] }
+      { from: string; to?: string; groupBy?: "DAY" | "MONTH" }
     >({
-      query: ({ from, to, groupBy = "DAY", page = 0, size = 50, sort }) => ({
-        url: "/vendors/me/reports/earnings",
-        params: { from, to, groupBy, ...pageableParams({ page, size, sort }) },
+      query: ({ from, to, groupBy = "DAY" }) => ({
+        url: "/vendors/me/reports/booking-value",
+        params: { from, to, groupBy },
       }),
       providesTags: [{ type: "Vendor", id: "EARNINGS" }],
     }),
@@ -206,11 +216,16 @@ export const vendorApi = api.injectEndpoints({
 
     // Vendor bookings
     getVendorBookings: builder.query<BookingResponse[], void>({
-      query: () => "/vendors/me/bookings",
+      query: () => ({
+        url: "/vendors/me/bookings",
+        params: { "pageable.page": 0, "pageable.size": 100, "pageable.sort": "createdAt,desc" },
+      }),
+      transformResponse: extractBookingList,
       providesTags: [{ type: "Booking", id: "VENDOR-LIST" }],
     }),
     getVendorSchedule: builder.query<BookingResponse[], { from?: string; to?: string } | void>({
       query: (args) => ({ url: "/vendors/me/bookings/schedule", params: args ?? {} }),
+      transformResponse: extractBookingList,
       providesTags: [{ type: "Booking", id: "VENDOR-SCHEDULE" }],
     }),
     getVendorBooking: builder.query<BookingResponse, string>({

@@ -74,22 +74,30 @@ export interface VendorPerformanceResponse {
   averageRating: number;
   reviewCount: number;
   medianResponseTimeMinutes: number;
-  totalEarnings: number;
+  completedBookingValue: number;
+  totalEarnings?: number;
 }
 
-export interface VendorEarningsPeriodRow {
+export interface VendorBookingValuePeriodPoint {
   period?: string;
-  totalEarnings?: number;
-  transactionCount?: number;
+  completedBookingValue?: number;
+  completedBookingCount?: number;
 }
 
 export interface VendorEarningsReportResponse {
   from: string;
   to?: string;
   groupBy: "DAY" | "MONTH";
-  totalEarnings: number;
-  totalTransactions: number;
-  rows?: SpringPage<VendorEarningsPeriodRow>;
+  currencies?: Array<{
+    currency?: string;
+    completedBookingValue?: number;
+    completedBookingCount?: number;
+    averageBookingValue?: number;
+  }>;
+  trend?: Array<{
+    currency?: string;
+    points?: VendorBookingValuePeriodPoint[];
+  }>;
 }
 
 export interface CreateItemRequest {
