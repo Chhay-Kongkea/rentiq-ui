@@ -1,7 +1,10 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { useGetCategoriesQuery } from "@/redux/services/categoryApi";
+import Link from "next/link";
+import { useGetCategoriesQuery, useGetCategoryQuery } from "@/redux/services/categoryApi";
+import { useGetMyAddressesQuery } from "@/redux/services/userApi";
+import { geocodeAddress } from "@/lib/geocoding";
 import type { VendorItem } from "@/lib/types/vendor.types";
 import {
   useCreateVendorItemAvailabilityBlockMutation,
@@ -35,10 +38,16 @@ export default function VendorListingsPage() {
   const [editing, setEditing] = useState<VendorItem | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [manageItem, setManageItem] = useState<VendorItem | null>(null);
+  const [selectedCategoryId, setSelectedCategoryId] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [currentCoordinates, setCurrentCoordinates] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [locationLoading, setLocationLoading] = useState(false);
 
   const { data: categories = [] } = useGetCategoriesQuery();
+  const { data: selectedCategory, isLoading: specificationFieldsLoading } = useGetCategoryQuery(selectedCategoryId, { skip: !selectedCategoryId });
+  const { data: addresses = [], isLoading: addressesLoading } = useGetMyAddressesQuery();
+  const vendorLocation = addresses.find((address) => address.isDefault) ?? addresses[0];
   const { data: itemPage, isLoading } = useGetMyVendorItemsQuery({ pageSize: 100 });
   const items = itemPage?.content ?? [];
 
@@ -62,15 +71,51 @@ export default function VendorListingsPage() {
     setSuccess("");
   }
 
+  async function resolveVendorLocation() {
+    if (!vendorLocation || (Number.isFinite(vendorLocation.latitude) && Number.isFinite(vendorLocation.longitude))) return;
+
+    const address = [vendorLocation.addressLine, vendorLocation.city, vendorLocation.country || "Cambodia"]
+      .filter(Boolean)
+      .join(", ");
+    setLocationLoading(true);
+    try {
+      const coordinates = await geocodeAddress(address);
+      if (coordinates) {
+        setCurrentCoordinates(coordinates);
+        return;
+      }
+
+      if (navigator.geolocation) {
+        await new Promise<void>((resolve) => {
+          navigator.geolocation.getCurrentPosition(
+            ({ coords }) => {
+              setCurrentCoordinates({ latitude: coords.latitude, longitude: coords.longitude });
+              resolve();
+            },
+            () => resolve(),
+            { enableHighAccuracy: true, timeout: 10000 },
+          );
+        });
+      }
+    } catch {
+      // The form validation below will show a clear message if no coordinates were resolved.
+    } finally {
+      setLocationLoading(false);
+    }
+  }
+
   function openCreate() {
     resetMessages();
     setEditing(null);
+    setSelectedCategoryId("");
+    void resolveVendorLocation();
     setShowForm(true);
   }
 
   function openEdit(item: VendorItem) {
     resetMessages();
     setEditing(item);
+    setSelectedCategoryId(item.categoryId || "");
     setShowForm(true);
   }
 
@@ -81,22 +126,27 @@ export default function VendorListingsPage() {
     const categoryId = String(form.get("categoryId") || "").trim();
     const pricePerDay = Number(form.get("pricePerDay"));
     const depositAmountRaw = String(form.get("depositAmount") || "").trim();
-    const latitude = Number(form.get("latitude"));
-    const longitude = Number(form.get("longitude"));
-    const specificationsText = String(form.get("specifications") || "").trim();
-
-    let specifications: Record<string, unknown> | undefined;
-    if (specificationsText) {
-      try {
-        specifications = JSON.parse(specificationsText) as Record<string, unknown>;
-      } catch {
-        setError("Specifications must be valid JSON, for example {\"brand\":\"Sony\"}.");
-        return;
-      }
+    const latitude = editing ? Number(form.get("latitude")) : (vendorLocation?.latitude ?? currentCoordinates?.latitude ?? NaN);
+    const longitude = editing ? Number(form.get("longitude")) : (vendorLocation?.longitude ?? currentCoordinates?.longitude ?? NaN);
+    const specifications: Record<string, unknown> = {};
+    for (const field of selectedCategory?.specificationFields ?? []) {
+      const rawValue = String(form.get(`specification.${field.key}`) || "").trim();
+      if (!rawValue) continue;
+      if (field.type.toUpperCase() === "NUMBER") specifications[field.key] = Number(rawValue);
+      else if (field.type.toUpperCase() === "BOOLEAN") specifications[field.key] = rawValue === "true";
+      else specifications[field.key] = rawValue;
+    }
+    if (!selectedCategory && selectedCategoryId) {
+      setError("Loading the selected category specifications. Please try again.");
+      return;
     }
 
-    if (!categoryId || !Number.isFinite(pricePerDay) || pricePerDay <= 0 || !Number.isFinite(latitude) || !Number.isFinite(longitude)) {
-      setError("Category, daily price, latitude, and longitude are required.");
+    const locationText = editing
+      ? String(form.get("locationText") || "").trim()
+      : [vendorLocation?.addressLine, vendorLocation?.city, vendorLocation?.country].filter(Boolean).join(", ");
+
+    if (!categoryId || !Number.isFinite(pricePerDay) || pricePerDay <= 0 || !locationText || !Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+      setError(editing ? "Category, daily price, and a valid location are required." : "Add a default address with coordinates before creating a listing.");
       return;
     }
 
@@ -106,7 +156,7 @@ export default function VendorListingsPage() {
       description: String(form.get("description") || "").trim() || undefined,
       condition: String(form.get("condition") || "GOOD") as "NEW" | "LIKE_NEW" | "GOOD" | "FAIR" | "POOR",
       specifications,
-      locationText: String(form.get("locationText") || "").trim(),
+      locationText,
       latitude,
       longitude,
       pricePerDay,
@@ -259,17 +309,19 @@ export default function VendorListingsPage() {
             <button onClick={() => { setShowForm(false); setEditing(null); }} className="text-sm font-semibold text-slate-500">Close</button>
           </div>
 
-          <form key={editing?.id || "new"} onSubmit={saveItem} className="mt-5 grid gap-4 md:grid-cols-2">
+          {!editing && !addressesLoading && !vendorLocation ? <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">Your listing location comes from your default vendor address. <Link href="/user/profile/edit-profile" className="font-bold underline">Add an address in your profile</Link> before creating a listing.</div> : null}
+          {!editing && vendorLocation && (!Number.isFinite(vendorLocation.latitude) || !Number.isFinite(vendorLocation.longitude)) ? <div className="mt-5 rounded-xl border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">{locationLoading ? "Converting your vendor address to coordinates..." : "Your vendor address is used to fill the listing location automatically."}</div> : null}
+          <form key={`${editing?.id || "new"}-${vendorLocation?.id || "no-location"}-${currentCoordinates?.latitude || "no-coordinates"}`} onSubmit={saveItem} className="mt-5 grid gap-4 md:grid-cols-2">
             <label className="text-sm font-semibold text-slate-700">Title<input name="title" required defaultValue={editing?.title || ""} className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2.5 font-normal" /></label>
-            <label className="text-sm font-semibold text-slate-700">Category<select name="categoryId" required defaultValue={editing?.categoryId || ""} className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2.5 font-normal"><option value="">Select category</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></label>
+            <label className="text-sm font-semibold text-slate-700">Category<select name="categoryId" required value={selectedCategoryId} onChange={(event) => setSelectedCategoryId(event.target.value)} className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2.5 font-normal"><option value="">Select category</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></label>
             <label className="text-sm font-semibold text-slate-700">Condition<select name="condition" defaultValue={editing?.condition || "GOOD"} className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2.5 font-normal"><option value="NEW">New</option><option value="LIKE_NEW">Like new</option><option value="GOOD">Good</option><option value="FAIR">Fair</option><option value="POOR">Poor</option></select></label>
             <label className="text-sm font-semibold text-slate-700">Price / day<input name="pricePerDay" type="number" min="0.01" step="0.01" required defaultValue={editing?.pricePerDay ?? ""} className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2.5 font-normal" /></label>
             <label className="text-sm font-semibold text-slate-700">Security deposit<input name="depositAmount" type="number" min="0" step="0.01" defaultValue={editing?.depositAmount ?? ""} className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2.5 font-normal" /></label>
-            <label className="text-sm font-semibold text-slate-700">Location text<input name="locationText" required defaultValue={editing?.locationText || ""} className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2.5 font-normal" /></label>
-            <label className="text-sm font-semibold text-slate-700">Latitude<input name="latitude" type="number" step="any" min="-90" max="90" required defaultValue={editing?.latitude ?? ""} className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2.5 font-normal" /></label>
-            <label className="text-sm font-semibold text-slate-700">Longitude<input name="longitude" type="number" step="any" min="-180" max="180" required defaultValue={editing?.longitude ?? ""} className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2.5 font-normal" /></label>
+            <label className="text-sm font-semibold text-slate-700">Location text<input name="locationText" required readOnly={!editing} defaultValue={editing?.locationText || (!addressesLoading ? [vendorLocation?.addressLine, vendorLocation?.city, vendorLocation?.country].filter(Boolean).join(", ") : "")} className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2.5 font-normal read-only:bg-slate-50" /></label>
+            <label className="text-sm font-semibold text-slate-700">Latitude<input name="latitude" type="number" step="any" min="-90" max="90" required readOnly={!editing} defaultValue={editing?.latitude ?? vendorLocation?.latitude ?? currentCoordinates?.latitude ?? ""} className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2.5 font-normal read-only:bg-slate-50" /></label>
+            <label className="text-sm font-semibold text-slate-700">Longitude<input name="longitude" type="number" step="any" min="-180" max="180" required readOnly={!editing} defaultValue={editing?.longitude ?? vendorLocation?.longitude ?? currentCoordinates?.longitude ?? ""} className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2.5 font-normal read-only:bg-slate-50" /></label>
             <label className="text-sm font-semibold text-slate-700 md:col-span-2">Description<textarea name="description" rows={3} defaultValue={editing?.description || ""} className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2.5 font-normal" /></label>
-            <label className="text-sm font-semibold text-slate-700 md:col-span-2">Specifications JSON<textarea name="specifications" rows={3} defaultValue={editing?.specifications ? JSON.stringify(editing.specifications, null, 2) : ""} placeholder='{"brand":"Sony","model":"A7 IV"}' className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2.5 font-mono text-xs font-normal" /></label>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 md:col-span-2"><div className="flex items-center justify-between gap-3"><div><h3 className="text-sm font-bold text-slate-900">Specifications</h3><p className="mt-1 text-xs text-slate-500">Fields are provided by the selected category.</p></div>{specificationFieldsLoading ? <span className="text-xs text-slate-500">Loading...</span> : null}</div><div className="mt-4 grid gap-4 md:grid-cols-2">{(selectedCategory?.specificationFields ?? []).map((field) => { const currentValue = editing?.specifications?.[field.key]; const fieldType = field.type.toUpperCase(); return <label key={field.key} className="text-sm font-semibold text-slate-700">{field.label}{field.required ? " *" : ""}{fieldType === "SELECT" ? <select name={`specification.${field.key}`} required={field.required} defaultValue={String(currentValue ?? "")} className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 font-normal"><option value="">Select {field.label}</option>{(field.options ?? []).map((option) => <option key={option} value={option}>{option}</option>)}</select> : fieldType === "BOOLEAN" ? <select name={`specification.${field.key}`} required={field.required} defaultValue={currentValue == null ? "" : String(currentValue)} className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 font-normal"><option value="">Select</option><option value="true">Yes</option><option value="false">No</option></select> : <input name={`specification.${field.key}`} type={fieldType === "NUMBER" ? "number" : "text"} required={field.required} defaultValue={String(currentValue ?? "")} className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 font-normal" />}</label>; })}{!specificationFieldsLoading && selectedCategoryId && !selectedCategory?.specificationFields?.length ? <p className="text-xs text-slate-500 md:col-span-2">This category has no additional specifications.</p> : null}{!selectedCategoryId ? <p className="text-xs text-slate-500 md:col-span-2">Select a category to see its specification fields.</p> : null}</div></div>
             <div className="flex gap-2 md:col-span-2"><button disabled={createState.isLoading || updateState.isLoading} className="rounded-lg bg-[#253C95] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60">{createState.isLoading || updateState.isLoading ? "Saving..." : editing ? "Save changes" : "Create listing"}</button><button type="button" onClick={() => { setShowForm(false); setEditing(null); }} className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700">Cancel</button></div>
           </form>
         </section>
