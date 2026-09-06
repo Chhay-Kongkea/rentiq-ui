@@ -90,7 +90,6 @@ export const renterApi = api.injectEndpoints({
     uploadImage: builder.mutation<unknown, FormData>({ query: (body) => ({ url: "/images/upload", method: "POST", body }) }),
     getImage: builder.query<unknown, Id>({ query: (id) => `/images/${id}` }),
     deleteImage: builder.mutation<void, Id>({ query: (id) => ({ url: `/images/${id}`, method: "DELETE" }) }),
-    getCategory: builder.query<unknown, Id>({ query: (id) => `/categories/${id}` }),
     getCategoryItems: builder.query<unknown, { id: Id; params?: PageParams }>({ query: ({ id, params }) => ({ url: `/categories/${id}/items`, params }) }),
     getCategoryChildren: builder.query<unknown, Id>({ query: (id) => `/categories/${id}/children` }),
   }),
@@ -107,5 +106,5 @@ export const {
   useGetWalletQuery, useGetWalletTransactionsQuery, useGetWalletTransactionQuery, useGetTopupRequestsQuery, useCreateTopupRequestMutation, useGetTopupRequestQuery,
   useGetSearchSuggestionsQuery, useSearchNearbyQuery, useGetSearchLogsQuery, useGetNearbyItemsQuery, useGetItemReviewsQuery, useGetItemAvailabilityQuery,
   useGetReviewQuery, useUpdateReviewMutation, useDeleteReviewMutation, useCreateReportMutation, useGetMyReportsQuery, useGetMyReportQuery,
-  useUploadImageMutation, useGetImageQuery, useDeleteImageMutation, useGetCategoryQuery, useGetCategoryItemsQuery, useGetCategoryChildrenQuery,
+  useUploadImageMutation, useGetImageQuery, useDeleteImageMutation, useGetCategoryItemsQuery, useGetCategoryChildrenQuery,
 } = renterApi;

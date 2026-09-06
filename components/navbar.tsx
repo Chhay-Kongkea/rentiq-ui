@@ -93,6 +93,7 @@ const pathname = usePathname();
   const isVendor = session?.user?.role?.toUpperCase() === "VENDOR";
   const displayName = session?.user?.name ?? session?.user?.email ?? "User";
   const initials = getInitials(session?.user?.name, session?.user?.email);
+  const { data: bookings = [] } = useGetMyBookingsQuery(undefined, { skip: !isLoggedIn });
 
   // Helper to check active tab based on current route
   const isActive = (path: string) => pathname === path;
