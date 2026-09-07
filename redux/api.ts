@@ -6,6 +6,6 @@ export const api = createApi({
     baseUrl: "/api",
     credentials: "same-origin",
   }),
-  tagTypes: ["Auth", "Item", "User", "Kyc", "Renter", "Vendor", "Booking", "Offer", "Wallet", "Notification"],
+  tagTypes: ["Auth", "Item", "User", "Kyc", "Renter", "Vendor", "Booking", "Offer", "Wallet", "Notification", "Advertisement", "Promotion", "Localization", "Pricing"],
   endpoints: () => ({}),
 });

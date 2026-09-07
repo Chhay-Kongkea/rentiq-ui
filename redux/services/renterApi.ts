@@ -1,5 +1,23 @@
 import { api } from "@/redux/api";
-import type { BookingResponse } from "@/lib/types/vendor.types";
+import type {
+  BookingQrCodeResponse,
+  BookingResponse,
+  BookingStatusHistoryResponse,
+  CreateDisputeRequest,
+  DisputeResponse,
+  ImageUploadResponse,
+  InspectionImageResponse,
+  InspectionResponse,
+  PageResponse,
+  ReportResponse,
+  UpdateBookingStatusRequest,
+  UpdateDisputeRequest,
+  UpsertInspectionRequest,
+  WalletResponse,
+  WalletTransactionResponse,
+} from "@/lib/types/vendor.types";
+import type { Category } from "@/lib/types/category.types";
+import type { Item } from "@/lib/types/item.types";
 
 type Id = string;
 type Body = Record<string, unknown>;
@@ -34,25 +52,25 @@ export const renterApi = api.injectEndpoints({
       transformResponse: normalizeBookings,
       providesTags: ["Renter"],
     }),
-    getBooking: builder.query<unknown, Id>({ query: (id) => `/bookings/${id}` }),
-    updateBookingStatus: builder.mutation<unknown, { id: Id; body: Body }>({ query: ({ id, body }) => ({ url: `/bookings/${id}/status`, method: "PATCH", body }), invalidatesTags: ["Renter"] }),
-    getBookingStatusHistory: builder.query<unknown, Id>({ query: (id) => `/bookings/${id}/status-history` }),
-    getBookingReceipt: builder.query<unknown, Id>({ query: (id) => `/bookings/${id}/receipt` }),
-    getBookingQrCode: builder.query<unknown, Id>({ query: (id) => `/bookings/${id}/qr-code` }),
-    getBookingInvoice: builder.query<unknown, Id>({ query: (id) => `/bookings/${id}/invoice` }),
+    getBooking: builder.query<BookingResponse, Id>({ query: (id) => `/bookings/${id}`, providesTags: (_result, _error, id) => [{ type: "Renter", id }] }),
+    updateBookingStatus: builder.mutation<BookingResponse, { id: Id; body: UpdateBookingStatusRequest }>({ query: ({ id, body }) => ({ url: `/bookings/${id}/status`, method: "PATCH", body }), invalidatesTags: ["Renter"] }),
+    getBookingStatusHistory: builder.query<BookingStatusHistoryResponse[], Id>({ query: (id) => `/bookings/${id}/status-history` }),
+    getBookingReceipt: builder.query<Blob, Id>({ query: (id) => ({ url: `/bookings/${id}/receipt`, responseHandler: (response) => response.blob() }) }),
+    getBookingQrCode: builder.query<BookingQrCodeResponse, Id>({ query: (id) => `/bookings/${id}/qr-code` }),
+    getBookingInvoice: builder.query<Blob, Id>({ query: (id) => ({ url: `/bookings/${id}/invoice`, responseHandler: (response) => response.blob() }) }),
     createBookingReview: builder.mutation<unknown, { id: Id; body: Body }>({ query: ({ id, body }) => ({ url: `/bookings/${id}/review`, method: "POST", body }), invalidatesTags: ["Renter"] }),
 
-    getInspection: builder.query<unknown, Id>({ query: (id) => `/bookings/${id}/inspections` }),
-    createInspection: builder.mutation<unknown, { id: Id; body: Body }>({ query: ({ id, body }) => ({ url: `/bookings/${id}/inspections`, method: "POST", body }), invalidatesTags: ["Renter"] }),
-    updateInspection: builder.mutation<unknown, { id: Id; body: Body }>({ query: ({ id, body }) => ({ url: `/bookings/${id}/inspections`, method: "PATCH", body }), invalidatesTags: ["Renter"] }),
-    getInspectionImages: builder.query<unknown, Id>({ query: (id) => `/bookings/${id}/inspections/images` }),
-    addInspectionImages: builder.mutation<unknown, { id: Id; body: Body }>({ query: ({ id, body }) => ({ url: `/bookings/${id}/inspections/images`, method: "POST", body }), invalidatesTags: ["Renter"] }),
+    getInspection: builder.query<InspectionResponse, Id>({ query: (id) => `/bookings/${id}/inspections`, providesTags: ["Renter"] }),
+    createInspection: builder.mutation<InspectionResponse, { id: Id; body: UpsertInspectionRequest }>({ query: ({ id, body }) => ({ url: `/bookings/${id}/inspections`, method: "POST", body }), invalidatesTags: ["Renter"] }),
+    updateInspection: builder.mutation<InspectionResponse, { id: Id; body: UpsertInspectionRequest }>({ query: ({ id, body }) => ({ url: `/bookings/${id}/inspections`, method: "PATCH", body }), invalidatesTags: ["Renter"] }),
+    getInspectionImages: builder.query<InspectionImageResponse[], Id>({ query: (id) => `/bookings/${id}/inspections/images`, providesTags: ["Renter"] }),
+    addInspectionImages: builder.mutation<InspectionImageResponse[], { id: Id; body: Body }>({ query: ({ id, body }) => ({ url: `/bookings/${id}/inspections/images`, method: "POST", body }), invalidatesTags: ["Renter"] }),
     deleteInspectionImage: builder.mutation<void, { id: Id; imageId: Id }>({ query: ({ id, imageId }) => ({ url: `/bookings/${id}/inspections/images/${imageId}`, method: "DELETE" }), invalidatesTags: ["Renter"] }),
 
-    getBookingDisputes: builder.query<unknown, Id>({ query: (id) => `/bookings/${id}/disputes` }),
-    createBookingDispute: builder.mutation<unknown, { id: Id; body: Body }>({ query: ({ id, body }) => ({ url: `/bookings/${id}/disputes`, method: "POST", body }), invalidatesTags: ["Renter"] }),
-    getDispute: builder.query<unknown, Id>({ query: (id) => `/disputes/${id}` }),
-    updateDispute: builder.mutation<unknown, { id: Id; body: Body }>({ query: ({ id, body }) => ({ url: `/disputes/${id}`, method: "PATCH", body }), invalidatesTags: ["Renter"] }),
+    getBookingDisputes: builder.query<DisputeResponse[], Id>({ query: (id) => `/bookings/${id}/disputes`, providesTags: ["Renter"] }),
+    createBookingDispute: builder.mutation<DisputeResponse, { id: Id; body: CreateDisputeRequest }>({ query: ({ id, body }) => ({ url: `/bookings/${id}/disputes`, method: "POST", body }), invalidatesTags: ["Renter"] }),
+    getDispute: builder.query<DisputeResponse, Id>({ query: (id) => `/disputes/${id}` }),
+    updateDispute: builder.mutation<DisputeResponse, { id: Id; body: UpdateDisputeRequest }>({ query: ({ id, body }) => ({ url: `/disputes/${id}`, method: "PATCH", body }), invalidatesTags: ["Renter"] }),
 
     createOffer: builder.mutation<unknown, { requestId: Id; body: Body }>({ query: ({ requestId, body }) => ({ url: `/item-requests/${requestId}/offers`, method: "POST", body }), invalidatesTags: ["Renter"] }),
     getOffer: builder.query<unknown, Id>({ query: (id) => `/offers/${id}` }),
@@ -66,9 +84,9 @@ export const renterApi = api.injectEndpoints({
     cancelItemRequest: builder.mutation<void, Id>({ query: (id) => ({ url: `/item-requests/${id}`, method: "DELETE" }), invalidatesTags: ["Renter"] }),
     getNearbyItemRequests: builder.query<unknown, PageParams>({ query: (params = {}) => ({ url: "/item-requests/nearby", params }), providesTags: ["Renter"] }),
 
-    getWallet: builder.query<unknown, void>({ query: () => "/wallets/me" }),
-    getWalletTransactions: builder.query<unknown, PageParams | undefined>({ query: (params = {}) => ({ url: "/wallets/me/transactions", params }) }),
-    getWalletTransaction: builder.query<unknown, Id>({ query: (id) => `/wallets/me/transactions/${id}` }),
+    getWallet: builder.query<WalletResponse, void>({ query: () => "/wallets/me", providesTags: ["Wallet"] }),
+    getWalletTransactions: builder.query<PageResponse<WalletTransactionResponse>, PageParams | undefined>({ query: (params = {}) => ({ url: "/wallets/me/transactions", params }), providesTags: ["Wallet"] }),
+    getWalletTransaction: builder.query<WalletTransactionResponse, Id>({ query: (id) => `/wallets/me/transactions/${id}` }),
     getTopupRequests: builder.query<unknown, PageParams | undefined>({ query: (params = {}) => ({ url: "/wallets/me/topup-requests", params }) }),
     createTopupRequest: builder.mutation<unknown, Body>({ query: (body) => ({ url: "/wallets/me/topup-requests", method: "POST", body }), invalidatesTags: ["Renter"] }),
     getTopupRequest: builder.query<unknown, Id>({ query: (id) => `/wallets/me/topup-requests/${id}` }),
@@ -83,16 +101,16 @@ export const renterApi = api.injectEndpoints({
     getReview: builder.query<unknown, Id>({ query: (id) => `/reviews/${id}` }),
     updateReview: builder.mutation<unknown, { id: Id; body: Body }>({ query: ({ id, body }) => ({ url: `/reviews/${id}`, method: "PATCH", body }), invalidatesTags: ["Renter"] }),
     deleteReview: builder.mutation<void, Id>({ query: (id) => ({ url: `/reviews/${id}`, method: "DELETE" }), invalidatesTags: ["Renter"] }),
-    createReport: builder.mutation<unknown, Body>({ query: (body) => ({ url: "/reports", method: "POST", body }), invalidatesTags: ["Renter"] }),
-    getMyReports: builder.query<unknown, PageParams | undefined>({ query: (params = {}) => ({ url: "/reports/me", params }) }),
-    getMyReport: builder.query<unknown, Id>({ query: (id) => `/reports/${id}` }),
+    createReport: builder.mutation<ReportResponse, Body>({ query: (body) => ({ url: "/reports", method: "POST", body }), invalidatesTags: ["Renter"] }),
+    getMyReports: builder.query<PageResponse<ReportResponse>, PageParams | undefined>({ query: (params = {}) => ({ url: "/reports/me", params }), providesTags: ["Renter"] }),
+    getMyReport: builder.query<ReportResponse, Id>({ query: (id) => `/reports/${id}` }),
 
-    uploadImage: builder.mutation<unknown, FormData>({ query: (body) => ({ url: "/images/upload", method: "POST", body }) }),
+    uploadImage: builder.mutation<ImageUploadResponse, FormData>({ query: (body) => ({ url: "/images/upload", method: "POST", body }) }),
     getImage: builder.query<unknown, Id>({ query: (id) => `/images/${id}` }),
     deleteImage: builder.mutation<void, Id>({ query: (id) => ({ url: `/images/${id}`, method: "DELETE" }) }),
     getCategory: builder.query<unknown, Id>({ query: (id) => `/categories/${id}` }),
-    getCategoryItems: builder.query<unknown, { id: Id; params?: PageParams }>({ query: ({ id, params }) => ({ url: `/categories/${id}/items`, params }) }),
-    getCategoryChildren: builder.query<unknown, Id>({ query: (id) => `/categories/${id}/children` }),
+    getCategoryItems: builder.query<Item[], { id: Id; params?: PageParams }>({ query: ({ id, params }) => ({ url: `/categories/${id}/items`, params }) }),
+    getCategoryChildren: builder.query<Category[], Id>({ query: (id) => `/categories/${id}/children` }),
   }),
 });
 

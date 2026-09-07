@@ -6,7 +6,10 @@ export const categoryApi = api.injectEndpoints({
     getCategories: builder.query<Category[], void>({
       query: () => "/categories",
     }),
+    getCategory: builder.query<Category, string>({
+      query: (categoryId) => `/categories/${encodeURIComponent(categoryId)}`,
+    }),
   }),
 });
 
-export const { useGetCategoriesQuery } = categoryApi;
+export const { useGetCategoriesQuery, useGetCategoryQuery } = categoryApi;

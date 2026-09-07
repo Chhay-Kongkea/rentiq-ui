@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useAddFavoriteMutation, useGetFavoritesQuery, useRemoveFavoriteMutation } from "@/redux/services/renterApi";
+import type { ItemCondition } from "@/lib/types/item.types";
 
 interface RentalCardProps {
   id?: string;
@@ -17,7 +18,14 @@ interface RentalCardProps {
   price: number;
   period?: string;
   wishlistMode?: boolean;
+  condition?: ItemCondition;
+  featured?: boolean;
+  available?: boolean;
+  totalReviews?: number;
 }
+
+const formatCondition = (condition?: ItemCondition) =>
+  condition?.toLowerCase().replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 
 export default function RentalCard({
   id,
@@ -29,6 +37,10 @@ export default function RentalCard({
   price,
   period = "day",
   wishlistMode = false,
+  condition,
+  featured = false,
+  available = true,
+  totalReviews,
 }: RentalCardProps) {
   const router = useRouter();
   const { status } = useSession();
@@ -92,10 +104,13 @@ export default function RentalCard({
     >
       <div className="group relative flex flex-col justify-between rounded-2xl bg-white p-4 shadow-xs transition-all hover:shadow-md border border-neutral-100 w-full cursor-pointer">
         {/* Top Section: Category & Favorite Button */}
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-bold tracking-wider text-[#FF2B2B] uppercase">
-            {category}
-          </span>
+        <div className="flex items-center justify-between mb-2 gap-2">
+          <div className="flex min-w-0 items-center gap-1.5">
+            <span className="truncate text-xs font-bold tracking-wider text-[#FF2B2B] uppercase">
+              {category}
+            </span>
+            {condition ? <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">{formatCondition(condition)}</span> : null}
+          </div>
           <button 
             type="button" 
             aria-label={isFavorite ? "Remove from favorites" : "Save to favorites"}
@@ -120,6 +135,8 @@ export default function RentalCard({
 
         {/* Product Image */}
         <div className="relative mb-4 flex h-40 w-full items-center justify-center overflow-hidden">
+          {featured ? <span className="absolute left-0 top-0 z-10 rounded-full bg-[#253C95] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white shadow-sm">Featured</span> : null}
+          {!available ? <span className="absolute right-0 top-0 z-10 rounded-full bg-slate-900/85 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white">Unavailable</span> : null}
           <img
             src={image}
             alt={title}
@@ -141,6 +158,7 @@ export default function RentalCard({
           <div className="flex items-center gap-1 shrink-0 font-semibold text-neutral-900">
             <Star className="size-3.5 fill-[#FFB800] text-[#FFB800]" />
             <span>{rating.toFixed(1)}</span>
+            {totalReviews != null ? <span className="font-normal text-neutral-400">({totalReviews})</span> : null}
           </div>
         </div>
 

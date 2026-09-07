@@ -18,6 +18,9 @@
 @theme inline {
   --font-sans: var(--font-plus-jakarta), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  /* Normal/body text (text-sm, used as the app's default text size) is 16px */
+  --text-sm: 1rem;
+  --text-sm--line-height: 1.5rem;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-sans);
