@@ -69,3 +69,62 @@ export interface PublicItemQuery {
   sortBy?: string;
   sortDirection?: "asc" | "desc";
 }
+
+export interface FavoriteItem {
+  itemId: string;
+  title?: string;
+  thumbnailUrl?: string;
+  pricePerDay?: number;
+  averageRating?: number;
+  totalReviews?: number;
+  locationText?: string;
+  favoritedAt?: string;
+}
+
+export interface AvailabilityBlock {
+  id: string;
+  itemId?: string;
+  startDate: string;
+  endDate: string;
+  reason?: string;
+  source?: string;
+  createdAt?: string;
+}
+
+export interface ItemReviewImage {
+  id?: string;
+  imageUrl?: string;
+  thumbnailUrl?: string;
+  sortOrder?: number;
+}
+
+export interface ReviewImageInput {
+  imageUrl: string;
+  thumbnailUrl?: string;
+}
+
+export interface ItemReview {
+  id: string;
+  bookingId?: string;
+  reviewerId?: string;
+  itemId?: string;
+  rating?: number;
+  reviewText?: string;
+  vendorReply?: string;
+  vendorRepliedAt?: string;
+  status?: string;
+  createdAt?: string;
+  images?: ItemReviewImage[];
+}
+
+export interface ItemReviewsResponse {
+  content: ItemReview[];
+  totalElements: number;
+  totalPages: number;
+  first: boolean;
+  last: boolean;
+  size: number;
+  number: number;
+  numberOfElements: number;
+  empty: boolean;
+}

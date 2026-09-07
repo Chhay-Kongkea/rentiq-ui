@@ -51,7 +51,11 @@ function formatMoney(amount = 0, currency = "USD") {
 
 export default function MyBookingPage() {
   const [activeTab, setActiveTab] = useState<TabId>("all");
-  const { data: bookings = [], isLoading, isError, refetch } = useGetMyBookingsQuery();
+  const { data: bookings = [], isLoading, isError, refetch } = useGetMyBookingsQuery(undefined, {
+    pollingInterval: 15000,
+    refetchOnMountOrArgChange: true,
+    refetchOnFocus: true,
+  });
   const filteredBookings = bookings.filter((booking) => activeTab === "all" || bookingGroup(booking.status) === activeTab);
 
   return (
@@ -90,7 +94,7 @@ function BookingCard({ booking }: { booking: BookingResponse }) {
           <div className="text-left sm:text-right"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total · {formatLabel(booking.paymentStatus || "UNPAID")}</p><p className="text-xl font-extrabold text-slate-800">{formatMoney(booking.totalAmount, booking.currency)}</p></div>
         </div>
         <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2"><DateBox label="Start Date" value={formatDate(booking.rentalStart)} /><DateBox label="End Date" value={formatDate(booking.rentalEnd)} /></div>
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 pt-1"><Link href={`/items/${booking.itemId}`} className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50">View Item Details</Link><span className="text-xs font-medium text-slate-400">{booking.rentalDays ?? "–"} rental days</span></div>
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 pt-1"><div className="flex flex-wrap gap-2"><Link href={`/user/profile/my-booking/detail?bookingId=${booking.id}`} className="rounded-xl bg-[#253C95] px-4 py-2 text-xs font-semibold text-white transition hover:bg-[#1e3179]">View Booking</Link><Link href={`/items/${booking.itemId}`} className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50">View Item Details</Link></div><span className="text-xs font-medium text-slate-400">{booking.rentalDays ?? "–"} rental days</span></div>
       </div>
     </article>
   );

@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
-import { MapPin, Star, Heart, ShoppingCart } from "lucide-react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { useAddFavoriteMutation, useGetFavoritesQuery, useRemoveFavoriteMutation } from "@/redux/services/renterApi";
+import { Heart, MapPin, Star } from "lucide-react";
 import type { ItemCondition } from "@/lib/types/item.types";
+import { useAddFavoriteMutation, useGetFavoritesQuery, useRemoveFavoriteMutation } from "@/redux/services/renterApi";
 
 interface RentalCardProps {
   id?: string;
@@ -28,177 +28,70 @@ const formatCondition = (condition?: ItemCondition) =>
   condition?.toLowerCase().replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 
 export default function RentalCard({
-  id,
-  category,
-  image,
-  title,
-  location,
-  rating,
-  price,
-  period = "day",
-  wishlistMode = false,
-  condition,
-  featured = false,
-  available = true,
-  totalReviews,
+  id, category, image, title, location, rating, price, period = "day",
+  wishlistMode = false, condition, featured = false, available = true, totalReviews = 0,
 }: RentalCardProps) {
   const router = useRouter();
   const { status } = useSession();
-  const favoritesParams = { "pageable.page": 0, "pageable.size": 100, "pageable.sort": "favoritedAt,desc" };
-  const { data: favoritesResponse } = useGetFavoritesQuery(favoritesParams, {
-    skip: status !== "authenticated" || !id,
-  });
+  const { data: favoritesResponse } = useGetFavoritesQuery(
+    { "pageable.page": 0, "pageable.size": 100, "pageable.sort": "favoritedAt,desc" },
+    { skip: status !== "authenticated" || !id },
+  );
   const [addFavorite, { isLoading: isAddingFavorite }] = useAddFavoriteMutation();
   const [removeFavorite, { isLoading: isRemovingFavorite }] = useRemoveFavoriteMutation();
   const [favoriteOverride, setFavoriteOverride] = useState<boolean | null>(null);
   const [favoriteError, setFavoriteError] = useState(false);
-  const isUpdatingFavorite = isAddingFavorite || isRemovingFavorite;
-  const favorites = Array.isArray(favoritesResponse)
-    ? favoritesResponse
-    : Array.isArray((favoritesResponse as { content?: unknown[] } | undefined)?.content)
-      ? (favoritesResponse as { content: unknown[] }).content
-      : [];
-  const apiFavorite = favorites.some((favorite) => {
-    const saved = favorite as { itemId?: string; id?: string; item?: { id?: string } };
-    return saved.itemId === id || saved.item?.id === id || saved.id === id;
-  });
+  const favorites = Array.isArray(favoritesResponse) ? favoritesResponse : favoritesResponse?.content ?? [];
+  const apiFavorite = favorites.some((favorite) => favorite.itemId === id);
   const isFavorite = favoriteOverride ?? (wishlistMode || apiFavorite);
+  const isUpdatingFavorite = isAddingFavorite || isRemovingFavorite;
+  const href = id ? `/items/${id}` : "/items";
 
   async function toggleFavorite() {
     if (!id || isUpdatingFavorite) return;
     if (status !== "authenticated") {
-      router.push("/login");
+      router.push(`/login?callbackUrl=${encodeURIComponent(href)}`);
       return;
     }
-
-    const wasFavorite = isFavorite;
+    const previous = isFavorite;
     setFavoriteError(false);
-    setFavoriteOverride(!wasFavorite);
-
+    setFavoriteOverride(!previous);
     try {
-      if (wasFavorite) await removeFavorite(id).unwrap();
+      if (previous) await removeFavorite(id).unwrap();
       else await addFavorite(id).unwrap();
     } catch {
-      setFavoriteOverride(wasFavorite);
-      setFavoriteError(true);
-    }
-  }
-
-  async function removeFromWishlist() {
-    if (!id || isUpdatingFavorite) return;
-    setFavoriteError(false);
-    setFavoriteOverride(false);
-
-    try {
-      await removeFavorite(id).unwrap();
-    } catch {
-      setFavoriteOverride(true);
+      setFavoriteOverride(previous);
       setFavoriteError(true);
     }
   }
 
   return (
-    <Link 
-      href={id ? `/items/${id}` : "/items"}
-      className="block w-full max-w-[280px]"
-    >
-      <div className="group relative flex flex-col justify-between rounded-2xl bg-white p-4 shadow-xs transition-all hover:shadow-md border border-neutral-100 w-full cursor-pointer">
-        {/* Top Section: Category & Favorite Button */}
-        <div className="flex items-center justify-between mb-2 gap-2">
-          <div className="flex min-w-0 items-center gap-1.5">
-            <span className="truncate text-xs font-bold tracking-wider text-[#FF2B2B] uppercase">
-              {category}
-            </span>
-            {condition ? <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">{formatCondition(condition)}</span> : null}
-          </div>
-          <button 
-            type="button" 
-            aria-label={isFavorite ? "Remove from favorites" : "Save to favorites"}
-            aria-pressed={isFavorite}
-            aria-busy={isUpdatingFavorite}
-            disabled={!id || isUpdatingFavorite}
-            title={favoriteError ? "Unable to update favorites. Please try again." : undefined}
-            onClick={async (e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              await toggleFavorite();
-            }}
-            className={`flex size-9 items-center justify-center rounded-full transition-all active:scale-90 disabled:cursor-not-allowed disabled:opacity-60 ${
-              isFavorite
-                ? "bg-red-50 text-[#FF2B2B]"
-                : "bg-neutral-100 text-neutral-500 hover:text-[#FF2B2B]"
-            }`}
-          >
-            <Heart className={`size-5 transition-all ${isFavorite ? "fill-current" : "fill-transparent"}`} />
-          </button>
+    <article className="group relative w-full overflow-hidden rounded-[22px] border border-slate-200/80 bg-white shadow-[0_8px_30px_rgba(15,23,42,0.06)] transition duration-300 hover:-translate-y-1 hover:border-slate-300 hover:shadow-[0_18px_45px_rgba(15,23,42,0.12)]">
+      <div className="relative aspect-[4/3] overflow-hidden bg-white">
+        <Link href={href} aria-label={`View ${title}`} className="block size-full">
+          <img src={image} alt={title} className="size-full object-cover transition duration-500 group-hover:scale-[1.04]" />
+        </Link>
+        <div className="pointer-events-none absolute left-3 top-3 flex flex-wrap gap-2 pr-14">
+          {featured ? <span className="rounded-full bg-[#253C95] px-3 py-1.5 text-[10px] font-bold uppercase tracking-wide text-white shadow-sm">Featured</span> : null}
+          {!available ? <span className="rounded-full bg-slate-900/85 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wide text-white">Unavailable</span> : null}
         </div>
+        <button type="button" aria-label={isFavorite ? "Remove from favorites" : "Save to favorites"} aria-pressed={isFavorite} aria-busy={isUpdatingFavorite} disabled={!id || isUpdatingFavorite} title={favoriteError ? "Unable to update favorites. Please try again." : undefined} onClick={toggleFavorite} className={`absolute right-3 top-3 grid size-10 place-items-center rounded-full border border-white/70 shadow-md backdrop-blur-md transition active:scale-90 disabled:opacity-60 ${isFavorite ? "bg-white text-[#F73030]" : "bg-white/85 text-slate-700 hover:text-[#F73030]"}`}>
+          <Heart className={`size-[18px] ${isFavorite ? "fill-current" : ""}`} />
+        </button>
+      </div>
 
-        {/* Product Image */}
-        <div className="relative mb-4 flex h-40 w-full items-center justify-center overflow-hidden">
-          {featured ? <span className="absolute left-0 top-0 z-10 rounded-full bg-[#253C95] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white shadow-sm">Featured</span> : null}
-          {!available ? <span className="absolute right-0 top-0 z-10 rounded-full bg-slate-900/85 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white">Unavailable</span> : null}
-          <img
-            src={image}
-            alt={title}
-            className="max-h-full max-w-full object-contain transition-transform duration-300 group-hover:scale-105"
-          />
+      <div className="p-4">
+        <div className="flex items-center justify-between gap-3">
+          <span className="truncate text-[11px] font-bold uppercase tracking-[0.12em] text-[#F73030]">{category}</span>
+          {condition ? <span className="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-semibold text-slate-600">{formatCondition(condition)}</span> : null}
         </div>
-
-        {/* Title */}
-        <h3 className="mb-2 text-base font-bold text-neutral-900 truncate">
-          {title}
-        </h3>
-
-        {/* Location & Rating */}
-        <div className="flex items-center justify-between mb-4 text-xs text-neutral-500">
-          <div className="flex items-center gap-1 truncate">
-            <MapPin className="size-3.5 text-neutral-400 shrink-0" />
-            <span className="truncate">{location}</span>
-          </div>
-          <div className="flex items-center gap-1 shrink-0 font-semibold text-neutral-900">
-            <Star className="size-3.5 fill-[#FFB800] text-[#FFB800]" />
-            <span>{rating.toFixed(1)}</span>
-            {totalReviews != null ? <span className="font-normal text-neutral-400">({totalReviews})</span> : null}
-          </div>
-        </div>
-
-        {/* Divider */}
-        <div className="w-full h-[1px] bg-neutral-100 mb-3" />
-
-        {/* Bottom Section: Price & Cart Button */}
-        <div className="flex items-center justify-between">
-          <div>
-            <span className="text-lg font-bold text-[#FF2B2B]">${price}</span>
-            <span className="text-xs text-neutral-400">/{period}</span>
-          </div>
-          {wishlistMode ? (
-            <button
-              type="button"
-              disabled={isUpdatingFavorite}
-              onClick={async (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                await removeFromWishlist();
-              }}
-              className="rounded-lg border border-red-100 px-3 py-2 text-xs font-bold text-[#FF2B2B] transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {isRemovingFavorite ? "Removing..." : "Remove"}
-            </button>
-          ) : (
-            <button 
-              type="button"
-              aria-label="Add to cart"
-              onClick={(e) => {
-                e.preventDefault(); // Prevents navigating to detail page when adding to cart
-                e.stopPropagation();
-              }}
-              className="flex size-9 items-center justify-center rounded-full bg-sky-50 text-[#253C95] transition-colors hover:bg-sky-100"
-            >
-              <ShoppingCart className="size-4" />
-            </button>
-          )}
+        <Link href={href} className="mt-2 block"><h3 className="truncate text-[17px] font-bold tracking-tight text-slate-900 transition group-hover:text-[#253C95]">{title}</h3></Link>
+        <p className="mt-2 flex items-center gap-1.5 text-xs text-slate-500"><MapPin className="size-3.5 shrink-0 text-slate-400" /><span className="truncate">{location}</span></p>
+        <div className="mt-4 flex items-end justify-between gap-3 border-t border-slate-100 pt-4">
+          <div><p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">From</p><p className="mt-0.5 text-xl font-extrabold tracking-tight text-slate-900"><span className="text-[#F73030]">${price}</span><span className="text-xs font-medium text-slate-400"> / {period}</span></p></div>
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700"><Star className="size-4 fill-amber-400 text-amber-400" /><span>{rating.toFixed(1)}</span><span className="font-normal text-slate-400">({totalReviews})</span></div>
         </div>
       </div>
-    </Link>
+    </article>
   );
 }

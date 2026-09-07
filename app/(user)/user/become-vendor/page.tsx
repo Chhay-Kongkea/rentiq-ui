@@ -19,6 +19,7 @@ import {
   useGetMyVendorApplicationQuery,
   useSubmitVendorApplicationMutation,
 } from "@/redux/services/vendorApi";
+import { useGetPlatformPricingQuery } from "@/redux/services/publicApi";
 
 const statusLabel: Record<string, string> = {
   PENDING: "Under review",
@@ -41,6 +42,7 @@ export default function BecomeVendorPage() {
   const { data: addresses = [], isLoading: addressLoading } = useGetMyAddressesQuery();
   const { data: application, isLoading: applicationLoading, refetch: refetchApplication } =
     useGetMyVendorApplicationQuery();
+  const { data: platformPricing } = useGetPlatformPricingQuery();
 
   const [submitKyc, submitState] = useSubmitKycMutation();
   const [resubmitKyc, resubmitState] = useResubmitKycMutation();
@@ -231,6 +233,35 @@ export default function BecomeVendorPage() {
             </div>
           </div>
         )}
+
+        {platformPricing && (platformPricing.promotions?.length || platformPricing.advertisements?.length) ? (
+          <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <p className="text-sm font-bold text-slate-800">Advertising &amp; promotion pricing</p>
+            <p className="mt-1 text-xs text-slate-500">Once approved, you can boost listings and run ads. Here&apos;s what packages cost.</p>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              {platformPricing.promotions?.length ? (
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">Promotions</p>
+                  <ul className="mt-1.5 space-y-1 text-xs text-slate-600">
+                    {platformPricing.promotions.map((pkg, index) => (
+                      <li key={index} className="flex justify-between gap-3"><span>{pkg.packageType} ({pkg.durationDays}d)</span><span className="font-semibold text-slate-800">{Object.entries(pkg.prices ?? {}).map(([currency, amount]) => `${amount} ${currency}`).join(" / ")}</span></li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+              {platformPricing.advertisements?.length ? (
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">Advertisements</p>
+                  <ul className="mt-1.5 space-y-1 text-xs text-slate-600">
+                    {platformPricing.advertisements.map((pkg, index) => (
+                      <li key={index} className="flex justify-between gap-3"><span>{pkg.packageType} ({pkg.durationDays}d)</span><span className="font-semibold text-slate-800">{Object.entries(pkg.prices ?? {}).map(([currency, amount]) => `${amount} ${currency}`).join(" / ")}</span></li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
 
         {kyc && !kyc.emailVerified ? (
           <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-4">

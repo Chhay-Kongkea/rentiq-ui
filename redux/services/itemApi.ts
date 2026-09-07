@@ -40,7 +40,15 @@ export const itemApi = api.injectEndpoints({
       transformResponse: normalizePage,
       providesTags: [{ type: "Item", id: "FEATURED" }],
     }),
+    getOwnerItems: builder.query<ItemsResponse, { ownerId: string; pageNumber?: number; pageSize?: number; sortBy?: string; sortDirection?: "asc" | "desc" }>({
+      query: ({ ownerId, ...params }) => ({
+        url: `/vendors/${encodeURIComponent(ownerId)}/items`,
+        params,
+      }),
+      transformResponse: normalizePage,
+      providesTags: (_result, _error, { ownerId }) => [{ type: "Item", id: `OWNER-${ownerId}` }],
+    }),
   }),
 });
 
-export const { useGetItemsQuery, useGetItemQuery, useSearchItemsQuery, useGetFeaturedItemsQuery } = itemApi;
+export const { useGetItemsQuery, useGetItemQuery, useSearchItemsQuery, useGetFeaturedItemsQuery, useGetOwnerItemsQuery } = itemApi;

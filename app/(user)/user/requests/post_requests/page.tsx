@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useGetCategoriesQuery } from "@/redux/services/categoryApi";
-import { useCreateItemRequestMutation } from "@/redux/services/userApi";
+import { useCreateItemRequestMutation, useGetItemRequestQuery } from "@/redux/services/userApi";
+import { useUpdateItemRequestMutation } from "@/redux/services/renterApi";
 import dynamic from "next/dynamic";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   Home,
@@ -70,22 +71,52 @@ function apiMessage(error: unknown) {
 }
 
 export default function PostRequestPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#F2F4F7]" />}>
+      <PostRequestPageGate />
+    </Suspense>
+  );
+}
+
+function PostRequestPageGate() {
+  const searchParams = useSearchParams();
+  const editRequestId = searchParams.get("mode") === "edit" ? searchParams.get("requestId") : null;
+  const { data: existingRequest, isLoading } = useGetItemRequestQuery(editRequestId ?? "", { skip: !editRequestId });
+
+  if (editRequestId && isLoading) {
+    return <div className="min-h-screen bg-[#F2F4F7]" />;
+  }
+
+  return <PostRequestPageContent key={existingRequest?.id ?? editRequestId ?? "new"} editRequestId={editRequestId} existingRequest={existingRequest} />;
+}
+
+function PostRequestPageContent({ editRequestId, existingRequest }: { editRequestId: string | null; existingRequest?: { categoryId?: string; title?: string; description?: string; budgetMin?: number; budgetMax?: number; neededFrom?: string; neededTo?: string; latitude?: number; longitude?: number; location?: string } }) {
   const router = useRouter();
+  const isEditMode = Boolean(editRequestId);
   const { data: categories = [] } = useGetCategoriesQuery();
   const [createItemRequest] = useCreateItemRequestMutation();
+  const [updateItemRequest] = useUpdateItemRequestMutation();
 
-  const [category, setCategory] = useState("");
-  const [itemName, setItemName] = useState("");
-  const [description, setDescription] = useState("");
-  const [minBudget, setMinBudget] = useState("");
-  const [maxBudget, setMaxBudget] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const [location, setLocation] = useState("");
+  const [category, setCategory] = useState(existingRequest?.categoryId ?? "");
+  const [itemName, setItemName] = useState(existingRequest?.title ?? "");
+  const [description, setDescription] = useState(existingRequest?.description ?? "");
+  const [minBudget, setMinBudget] = useState(existingRequest?.budgetMin != null ? String(existingRequest.budgetMin) : "");
+  const [maxBudget, setMaxBudget] = useState(existingRequest?.budgetMax != null ? String(existingRequest.budgetMax) : "");
+  const [startDate, setStartDate] = useState(existingRequest?.neededFrom ?? "");
+  const [endDate, setEndDate] = useState(existingRequest?.neededTo ?? "");
+  const [location, setLocation] = useState(
+    existingRequest?.latitude != null && existingRequest?.longitude != null
+      ? existingRequest.location || `Pinned location (${existingRequest.latitude.toFixed(5)}, ${existingRequest.longitude.toFixed(5)}), Cambodia`
+      : "",
+  );
   const [pickupCoordinates, setPickupCoordinates] = useState<{
     lat: number;
     lng: number;
-  } | null>(null);
+  } | null>(
+    existingRequest?.latitude != null && existingRequest?.longitude != null
+      ? { lat: existingRequest.latitude, lng: existingRequest.longitude }
+      : null,
+  );
 
   const [errors, setErrors] = useState<FormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -163,8 +194,14 @@ export default function PostRequestPage() {
     setSubmitError("");
     try {
       if (!pickupCoordinates) return;
-      const createdRequest = await createItemRequest({ categoryId: category, title: itemName.trim(), description: description.trim(), budgetMin: Number(minBudget), budgetMax: Number(maxBudget), neededFrom: startDate, neededTo: endDate, latitude: pickupCoordinates.lat, longitude: pickupCoordinates.lng, radiusKm: 10 }).unwrap();
-      router.push(`/user/requests/requests_submit?requestId=${createdRequest.id}`);
+      const payload = { categoryId: category, title: itemName.trim(), description: description.trim(), budgetMin: Number(minBudget), budgetMax: Number(maxBudget), neededFrom: startDate, neededTo: endDate, latitude: pickupCoordinates.lat, longitude: pickupCoordinates.lng, radiusKm: 10 };
+      if (isEditMode && editRequestId) {
+        await updateItemRequest({ id: editRequestId, body: payload }).unwrap();
+        router.push(`/user/requests/requests_detail?requestId=${editRequestId}`);
+      } else {
+        const createdRequest = await createItemRequest(payload).unwrap();
+        router.push(`/user/requests/requests_submit?requestId=${createdRequest.id}`);
+      }
     } catch (error) {
       setSubmitError(apiMessage(error));
     } finally {
@@ -177,7 +214,7 @@ export default function PostRequestPage() {
 
       <main className="mx-auto max-w-3xl px-6 pb-24 pt-14 text-center">
         <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl">
-          <span className="text-[#1A2E6B]">Post a </span>
+          <span className="text-[#1A2E6B]">{isEditMode ? "Edit your " : "Post a "}</span>
           <span className="text-[#E8402C]">Request</span>
         </h1>
         <p className="mt-4 text-sm text-gray-500 sm:text-base">
@@ -395,7 +432,7 @@ export default function PostRequestPage() {
               disabled={isSubmitting}
               className="w-full rounded-xl cursor-pointer bg-[#E8402C] px-8 py-3 text-sm font-semibold text-white transition hover:bg-[#d6371f] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
             >
-              {isSubmitting ? "Submitting..." : "Submit Request"}
+              {isSubmitting ? "Submitting..." : isEditMode ? "Save Changes" : "Submit Request"}
             </button>
           </div>
           {submitError ? (
@@ -622,7 +659,7 @@ function SiteFooter() {
       </div>
 
       <p className="mt-12 text-center text-xs text-gray-400">
-        ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â© 2026 RentalHub. All rights reserved.
+        © 2026 RentalHub. All rights reserved.
       </p>
     </footer>
   );

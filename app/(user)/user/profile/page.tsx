@@ -2,9 +2,10 @@
 import Link from "next/link";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useGetMyAddressesQuery, useGetMyItemRequestsQuery, useGetMyNotificationPreferencesQuery, useGetMyProfileQuery, useGetMyReviewsQuery } from "@/redux/services/userApi";
+import AddressManager from "@/components/address-manager";
+import AvatarUpload from "@/components/avatar-upload";
 import {
   faPen,
-  faCamera,
   faUser,
   faCalendarDays,
   faPhone,
@@ -73,29 +74,7 @@ export default function UserProfilePage() {
             {/* Profile Identity */}
             <section className="rounded-[20px] border border-slate-100 bg-white p-6 shadow-sm">
               <div className="flex flex-col items-center gap-6 sm:flex-row">
-                <div className="relative shrink-0">
-                  {profile.avatarUrl ? (
-                    <img
-                      src={profile.avatarUrl}
-                      alt={`${fullName} profile`}
-                      className="h-28 w-28 rounded-full border-4 border-white object-cover shadow-md sm:h-32 sm:w-32"
-                    />
-                  ) : (
-                    <div
-                      role="img"
-                      aria-label={`${fullName} profile initials`}
-                      className="flex h-28 w-28 items-center justify-center rounded-full border-4 border-white bg-rose-100 text-3xl font-bold uppercase text-[#F73030] shadow-md sm:h-32 sm:w-32"
-                    >
-                      {initials}
-                    </div>
-                  )}
-                  <button className="absolute bottom-1 right-1 flex h-8 w-8 items-center justify-center rounded-full border border-slate-100 bg-white shadow-md hover:bg-slate-50">
-                    <FontAwesomeIcon
-                      icon={faCamera}
-                      className="h-3.5 w-3.5 text-slate-600"
-                    />
-                  </button>
-                </div>
+                <AvatarUpload avatarUrl={profile.avatarUrl} initials={initials} fullName={fullName} />
 
                 <div className="min-w-0 flex-1 text-center sm:text-left">
                   <div className="mb-2.5 flex flex-wrap items-center justify-center gap-3 sm:justify-start">
@@ -222,6 +201,8 @@ export default function UserProfilePage() {
                 </div>
               </div>
             </section>
+
+            <AddressManager />
           </div>
 
           {/* Sidebar */}
@@ -283,7 +264,7 @@ export default function UserProfilePage() {
                   Your score is based on verification levels and community
                   feedback.
                 </p>
-                <p className="mt-2 text-center text-xs text-slate-400">Community reviews: {reviews?.totalElements ?? 0}</p>
+                <Link href="/user/profile/reviews" className="mt-2 text-center text-xs font-semibold text-[#253C95] hover:underline">Community reviews: {reviews?.totalElements ?? 0}</Link>
               </div>
             </section>
 
@@ -326,6 +307,16 @@ export default function UserProfilePage() {
                     className="h-2.5 w-2.5"
                   />
                 </Link>
+              </div>
+            </section>
+
+            {/* Quick links */}
+            <section className="rounded-[20px] border border-slate-100 bg-white p-6 shadow-sm">
+              <h3 className="mb-3 text-base font-bold text-slate-800">Quick links</h3>
+              <div className="space-y-1">
+                <Link href="/user/profile/wallet" className="block rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900">Wallet</Link>
+                <Link href="/user/profile/notifications" className="block rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900">Notifications</Link>
+                <Link href="/user/profile/reports" className="block rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900">My Reports</Link>
               </div>
             </section>
           </aside>

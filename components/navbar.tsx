@@ -10,7 +10,9 @@ import { useSession } from "next-auth/react";
 import { logout } from "@/app/actions/auth";
 import { loginWithKeycloak } from "@/app/(auth)/login/actions";
 import { useGetCategoriesQuery } from "@/redux/services/categoryApi";
-import { useGetMyBookingsQuery } from "@/redux/services/renterApi";
+import { useGetMyBookingsQuery, useGetUnreadNotificationCountQuery } from "@/redux/services/renterApi";
+import { useGetMyProfileQuery, useUpdateMyProfileMutation } from "@/redux/services/userApi";
+import { useGetSupportedLocalesQuery } from "@/redux/services/publicApi";
 
 // Lucide Icons
 import {
@@ -30,6 +32,7 @@ import {
   Clock,
   LayoutGrid,
   MapPin,
+  Wallet,
 } from "lucide-react";
 
 // Shadcn UI Components
@@ -39,7 +42,11 @@ import {
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuPortal,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Switch } from "@/components/ui/switch";
@@ -94,6 +101,17 @@ const pathname = usePathname();
   const displayName = session?.user?.name ?? session?.user?.email ?? "User";
   const initials = getInitials(session?.user?.name, session?.user?.email);
   const { data: bookings = [] } = useGetMyBookingsQuery(undefined, { skip: !isLoggedIn });
+  const { data: unreadNotifications } = useGetUnreadNotificationCountQuery(undefined, { skip: !isLoggedIn });
+  const { data: myProfile } = useGetMyProfileQuery(undefined, { skip: !isLoggedIn });
+  const { data: supportedLocales } = useGetSupportedLocalesQuery();
+  const [updateProfile] = useUpdateMyProfileMutation();
+  const locales = supportedLocales?.locales ?? [];
+  const currentLocaleCode = (myProfile?.locale || "en").toUpperCase();
+
+  function handleLocaleSelect(code?: string) {
+    if (!code) return;
+    updateProfile({ locale: code }).catch(() => undefined);
+  }
 
   // Helper to check active tab based on current route
   const isActive = (path: string) => pathname === path;
@@ -334,24 +352,45 @@ const pathname = usePathname();
                         <span>Saved Wishlist</span>
                       </DropdownMenuItem>
 
-                      <DropdownMenuItem className="cursor-pointer gap-3 rounded-lg px-3 py-2.5 text-gray-700 focus:bg-gray-50">
-                        <Bell className="size-4 text-gray-600" />
-                        <span>Notifications</span>
+                      <DropdownMenuItem render={<Link href="/user/profile/wallet" />} className="cursor-pointer gap-3 rounded-lg px-3 py-2.5 text-gray-700 focus:bg-gray-50">
+                        <Wallet className="size-4 text-gray-600" />
+                        <span>Wallet</span>
+                      </DropdownMenuItem>
+
+                      <DropdownMenuItem render={<Link href="/user/profile/notifications" />} className="flex cursor-pointer items-center justify-between rounded-lg px-3 py-2.5 text-gray-700 focus:bg-gray-50">
+                        <div className="flex items-center gap-3">
+                          <Bell className="size-4 text-gray-600" />
+                          <span>Notifications</span>
+                        </div>
+                        {unreadNotifications?.unreadCount ? <span className="flex min-w-5 items-center justify-center rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] font-bold text-white">{unreadNotifications.unreadCount}</span> : null}
                       </DropdownMenuItem>
                     </DropdownMenuGroup>
 
                     <DropdownMenuSeparator className="m-0 bg-gray-100" />
 
                     <DropdownMenuGroup>
-                      <DropdownMenuItem className="flex cursor-pointer items-center justify-between rounded-lg px-3 py-2.5 text-gray-700 focus:bg-gray-50">
-                        <div className="flex items-center gap-3">
+                      <DropdownMenuSub>
+                        <DropdownMenuSubTrigger className="rounded-lg px-3 py-2.5 text-gray-700 focus:bg-gray-50">
                           <Globe className="size-4 text-gray-600" />
                           <span>Language</span>
-                        </div>
-                        <span className="rounded bg-gray-100 px-1.5 py-0.5 text-xs font-semibold text-gray-500">
-                          KH
-                        </span>
-                      </DropdownMenuItem>
+                          <span className="ml-auto mr-1 rounded bg-gray-100 px-1.5 py-0.5 text-xs font-semibold text-gray-500">
+                            {currentLocaleCode}
+                          </span>
+                        </DropdownMenuSubTrigger>
+                        <DropdownMenuPortal>
+                          <DropdownMenuSubContent>
+                            {locales.length === 0 ? (
+                              <DropdownMenuItem disabled className="rounded-lg px-3 py-2 text-gray-400">No locales available</DropdownMenuItem>
+                            ) : (
+                              locales.map((locale) => (
+                                <DropdownMenuItem key={locale.code} onClick={() => handleLocaleSelect(locale.code)} className="cursor-pointer gap-3 rounded-lg px-3 py-2 text-gray-700 focus:bg-gray-50">
+                                  <span>{locale.nativeName || locale.name || locale.code}</span>
+                                </DropdownMenuItem>
+                              ))
+                            )}
+                          </DropdownMenuSubContent>
+                        </DropdownMenuPortal>
+                      </DropdownMenuSub>
 
                       <div className="flex items-center justify-between rounded-lg px-3 py-2.5 text-gray-700 hover:bg-gray-50">
                         <div className="flex items-center gap-3">

@@ -11,6 +11,7 @@ import type {
   UserReview,
   UpdateProfileRequest,
 } from "@/lib/types/user.types";
+import type { BookingResponse, OfferResponse } from "@/lib/types/vendor.types";
 import { api } from "@/redux/api";
 
 export const userApi = api.injectEndpoints({
@@ -75,8 +76,8 @@ export const userApi = api.injectEndpoints({
       query: ({ page = 0, size = 20, sort = "createdAt,desc" } = {}) => ({ url: "/users/me/reviews", params: { "pageable.page": page, "pageable.size": size, "pageable.sort": sort } }),
       providesTags: [{ type: "User", id: "REVIEWS" }],
     }),
-    createBooking: builder.mutation<{ id: string; status?: string }, { itemId: string; rentalStart: string; rentalEnd: string }>({ query: (body) => ({ url: "/bookings", method: "POST", body }), invalidatesTags: [{ type: "User", id: "BOOKINGS" }] }),
-    getItemRequestOffers: builder.query<Array<{ id: string; itemTitle?: string; offeredPrice?: number; currency?: string; message?: string; status?: string; ownerId?: string; createdAt?: string }>, string>({ query: (requestId) => `/item-requests/${requestId}/offers`, providesTags: [{ type: "User", id: "ITEM-REQUESTS" }] }),
+    createBooking: builder.mutation<BookingResponse, { itemId: string; rentalStart: string; rentalEnd: string }>({ query: (body) => ({ url: "/bookings", method: "POST", body }), invalidatesTags: ["Renter"] }),
+    getItemRequestOffers: builder.query<OfferResponse[], string>({ query: (requestId) => `/item-requests/${requestId}/offers`, providesTags: [{ type: "User", id: "ITEM-REQUESTS" }] }),
     getItemRequest: builder.query<UserItemRequest, string>({ query: (requestId) => `/item-requests/${requestId}`, providesTags: [{ type: "User", id: "ITEM-REQUESTS" }] }),
     createItemRequest: builder.mutation<UserItemRequest, { categoryId: string; title: string; description?: string; budgetMin?: number; budgetMax?: number; neededFrom: string; neededTo: string; latitude: number; longitude: number; radiusKm?: number }>({ query: (body) => ({ url: "/item-requests", method: "POST", body }), invalidatesTags: [{ type: "User", id: "ITEM-REQUESTS" }] }),
     getMyItemRequests: builder.query<PageResponse<UserItemRequest>, { pageNumber?: number; pageSize?: number }>({

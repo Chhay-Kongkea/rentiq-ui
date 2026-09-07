@@ -1,9 +1,22 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { toast } from "sonner";
 import { useGetItemRequestOffersQuery, useGetItemRequestQuery } from "@/redux/services/userApi";
+import { useCancelItemRequestMutation } from "@/redux/services/renterApi";
 import { useGetCategoriesQuery } from "@/redux/services/categoryApi";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import Link from "next/link";
 import {
   Home,
@@ -46,42 +59,6 @@ type Offer = {
   bestMatch?: boolean;
 };
 
-const OFFERS: Offer[] = [
-  {
-    id: "1",
-    name: "Tith Cholna",
-    rating: 4.9,
-    reviewCount: 124,
-    title: "Full Kit with Extra Battery",
-    quote:
-      "Hey! I saw your request. I have the exact Sony setup you need. I'll include a 128GB...",
-    totalPrice: 135,
-    perDay: 45,
-    bestMatch: true,
-  },
-  {
-    id: "2",
-    name: "T. Seyha",
-    rating: 4.7,
-    reviewCount: 42,
-    title: "Body Only - Low Usage",
-    quote:
-      "Body only, but it's practically new. I can meet you for the handoff in DUMBO on...",
-    totalPrice: 120,
-    perDay: 40,
-  },
-  {
-    id: "3",
-    name: "K. Chanthorn",
-    rating: 5.0,
-    reviewCount: 8,
-    title: "Standard Offer",
-    quote: "Available for the requested dates. Pickup in Williamsburg.",
-    totalPrice: 150,
-    perDay: 50,
-  },
-];
-
 const EXPIRES_IN_SECONDS = 4 * 3600 + 22 * 60 + 15;
 
 export default function RequestDetailPage() {
@@ -119,7 +96,7 @@ function RequestDetailPageContent() {
               <span className="mx-1 text-gray-300">&gt;</span> Requests{" "}
               <span className="mx-1 text-gray-300">&gt;</span>
               <span className="font-semibold text-[#E8402C]">
-                Request #{requestId || "ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â"}
+                Request #{requestId ? requestId.slice(0, 8) : "-"}
               </span>
             </p>
             <h1 className="mt-1 text-2xl font-bold text-[#1A2340]">
@@ -130,7 +107,7 @@ function RequestDetailPageContent() {
         </div>
 
         <div className="mt-8 grid gap-8 lg:grid-cols-[400px_1fr]">
-          <RequestSummaryCard request={request} loading={requestLoading} categoryName={categoryName} CategoryIcon={CategoryIcon} />
+          <RequestSummaryCard requestId={requestId} request={request} loading={requestLoading} categoryName={categoryName} CategoryIcon={CategoryIcon} />
 
           <section>
             <div className="flex items-center justify-between">
@@ -150,15 +127,17 @@ function RequestDetailPageContent() {
             </div>
 
             <div className="mt-5 space-y-5">
-              {offersLoading ? <p className="py-10 text-center text-sm text-gray-500">Loading offers...</p> : sortedOffers.map((offer) => (
-                <OfferCard key={offer.id} offer={offer} />
+              {offersLoading ? <p className="py-10 text-center text-sm text-gray-500">Loading offers...</p> : sortedOffers.length === 0 ? <p className="py-10 text-center text-sm text-gray-400">No offers yet.</p> : sortedOffers.map((offer) => (
+                <OfferCard key={offer.id} offer={offer} requestId={requestId} />
               ))}
             </div>
 
-            <p className="mt-6 flex items-center justify-center gap-2 text-sm text-gray-400">
-              <span className="h-2 w-2 rounded-full bg-emerald-500" />
-              Wait for more lenders to respond...
-            </p>
+            {sortedOffers.length > 0 ? (
+              <p className="mt-6 flex items-center justify-center gap-2 text-sm text-gray-400">
+                <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                Wait for more lenders to respond...
+              </p>
+            ) : null}
           </section>
         </div>
       </main>
@@ -204,13 +183,36 @@ function getCategoryIcon(categoryName: string) {
   return Tag;
 }
 
-function RequestSummaryCard({ request, loading, categoryName, CategoryIcon }: { request?: { title?: string; categoryId?: string; budgetMin?: number; budgetMax?: number; neededFrom?: string; neededTo?: string; latitude?: number; longitude?: number }; loading: boolean; categoryName: string; CategoryIcon: React.ComponentType<{ className?: string }> }) {
+function RequestSummaryCard({ requestId, request, loading, categoryName, CategoryIcon }: { requestId: string; request?: { status?: string; title?: string; categoryId?: string; budgetMin?: number; budgetMax?: number; neededFrom?: string; neededTo?: string; latitude?: number; longitude?: number }; loading: boolean; categoryName: string; CategoryIcon: React.ComponentType<{ className?: string }> }) {
+  const router = useRouter();
+  const [cancelRequest, { isLoading: isCancelling }] = useCancelItemRequestMutation();
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const canManage = !request?.status || request.status === "OPEN";
+
+  async function handleCancel() {
+    setConfirmOpen(false);
+    try {
+      await cancelRequest(requestId).unwrap();
+      toast.success("Request cancelled");
+      router.push("/user/requests/myrequests");
+    } catch {
+      toast.error("Unable to cancel this request");
+    }
+  }
+
   return (
     <div className="h-fit rounded-2xl bg-white p-6 shadow-[0_4px_24px_rgba(20,30,60,0.06)]">
-      <p className="flex items-center gap-2 text-sm font-semibold text-[#1A2340]">
-        <FileText className="h-4 w-4 text-[#E8402C]" />
-        Request Summary
-      </p>
+      <div className="flex items-center justify-between">
+        <p className="flex items-center gap-2 text-sm font-semibold text-[#1A2340]">
+          <FileText className="h-4 w-4 text-[#E8402C]" />
+          Request Summary
+        </p>
+        {canManage ? (
+          <Link href={`/user/requests/post_requests?mode=edit&requestId=${requestId}`} className="text-xs font-bold text-[#1A2E6B] hover:underline">
+            Edit
+          </Link>
+        ) : null}
+      </div>
 
       <div className="mt-4 flex gap-4">
         <div className="flex h-20 w-24 shrink-0 items-center justify-center rounded-xl bg-[#EEF2FC] text-[#253C95]"><CategoryIcon className="h-9 w-9" /></div>
@@ -234,14 +236,14 @@ function RequestSummaryCard({ request, loading, categoryName, CategoryIcon }: { 
             BUDGET
           </p>
           <p className="mt-1 text-lg font-bold text-[#E8402C]">
-            {request ? `$${request.budgetMin ?? 0} - $${request.budgetMax ?? 0} / day` : "ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â"}
+            {request ? `$${request.budgetMin ?? 0} - $${request.budgetMax ?? 0} / day` : "Not set"}
           </p>
         </div>
         <div>
           <p className="text-xs font-bold tracking-wide text-gray-400">
             DURATION
           </p>
-          <p className="mt-1 text-lg font-bold text-[#1A2340]">{request?.neededFrom && request?.neededTo ? `${Math.max(1, Math.ceil((new Date(request.neededTo).getTime() - new Date(request.neededFrom).getTime()) / 86400000))} Days` : "ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â"}</p>
+          <p className="mt-1 text-lg font-bold text-[#1A2340]">{request?.neededFrom && request?.neededTo ? `${Math.max(1, Math.ceil((new Date(request.neededTo).getTime() - new Date(request.neededFrom).getTime()) / 86400000))} Days` : "Not set"}</p>
         </div>
       </div>
 
@@ -269,24 +271,42 @@ function RequestSummaryCard({ request, loading, categoryName, CategoryIcon }: { 
         </div>
       </div>
 
-      <div className="mt-6 border-t border-gray-100 pt-6">
-        <button
-          type="button"
-          className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#E8402C] py-3 text-sm font-semibold text-[#E8402C] hover:bg-[#FBF4F3]"
-        >
-          <XCircle className="h-4 w-4" />
-          Cancel Request
-        </button>
-        <p className="mt-3 text-center text-xs text-gray-400">
-          Canceling will notify all potential lenders and clear your current
-          offers.
-        </p>
-      </div>
+      {canManage ? (
+        <div className="mt-6 border-t border-gray-100 pt-6">
+          <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+            <AlertDialogTrigger
+              render={
+                <button
+                  type="button"
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#E8402C] py-3 text-sm font-semibold text-[#E8402C] hover:bg-[#FBF4F3]"
+                >
+                  <XCircle className="h-4 w-4" />
+                  Cancel Request
+                </button>
+              }
+            />
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Cancel this request?</AlertDialogTitle>
+                <AlertDialogDescription>Canceling will notify all potential lenders and clear your current offers. This cannot be undone.</AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Keep request</AlertDialogCancel>
+                <AlertDialogAction onClick={handleCancel} disabled={isCancelling}>{isCancelling ? "Cancelling..." : "Cancel request"}</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+          <p className="mt-3 text-center text-xs text-gray-400">
+            Canceling will notify all potential lenders and clear your current
+            offers.
+          </p>
+        </div>
+      ) : null}
     </div>
   );
 }
 
-function OfferCard({ offer }: { offer: Offer }) {
+function OfferCard({ offer, requestId }: { offer: Offer; requestId: string }) {
   return (
     <div
       className={`relative overflow-hidden rounded-2xl bg-white p-6 shadow-[0_4px_24px_rgba(20,30,60,0.06)] ${
@@ -336,16 +356,16 @@ function OfferCard({ offer }: { offer: Offer }) {
       </div>
 
       <div className="mt-5 flex flex-col gap-3 border-t border-gray-100 pt-5 sm:flex-row">
-        <button
-          type="button"
-          className={`flex-1 rounded-xl py-3 text-sm font-semibold transition ${
+        <Link
+          href={`/user/requests/offer_detail?requestId=${requestId}&offerId=${offer.id}`}
+          className={`flex-1 rounded-xl py-3 text-center text-sm font-semibold transition ${
             offer.bestMatch
               ? "bg-[#E8402C] text-white hover:bg-[#d6371f]"
               : "bg-[#E4EBFB] text-[#1A2E6B] hover:bg-[#d7e2f8]"
           }`}
         >
           View Full Offer
-        </button>
+        </Link>
         <button
           type="button"
           className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-gray-200 py-3 text-sm font-semibold text-[#1A2340] hover:bg-gray-50"

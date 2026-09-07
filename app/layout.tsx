@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Plus_Jakarta_Sans, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { Toaster } from "sonner";
 import NavbarWrapper from "@/components/navbar-wrapper";
 import StoreProvider from "./store-provider";
 import AuthSessionProvider from "./auth-session-provider";
@@ -19,6 +20,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           <ThemeProvider>
             <StoreProvider>
               <NavbarWrapper>{children}</NavbarWrapper>
+              <Toaster position="top-center" richColors closeButton />
             </StoreProvider>
           </ThemeProvider>
         </AuthSessionProvider>

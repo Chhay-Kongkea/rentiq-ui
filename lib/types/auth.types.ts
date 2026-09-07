@@ -15,6 +15,31 @@ export interface RegisterResponse {
   lastName: string;
 }
 
+export interface LoginRequest {
+  username: string;
+  password: string;
+}
+
+export interface TokenResponse {
+  accessToken?: string;
+  refreshToken?: string;
+  tokenType?: string;
+  expiresIn?: number;
+  refreshExpiresIn?: number;
+}
+
+export interface RefreshTokenRequest {
+  refreshToken: string;
+}
+
+export interface EmailRequest {
+  email: string;
+}
+
+export interface MessageResponse {
+  message?: string;
+}
+
 export interface ApiErrorResponse {
   status?: number;
   error?: string;

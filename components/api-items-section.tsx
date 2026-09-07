@@ -8,6 +8,14 @@ import { useGetCategoriesQuery } from "@/redux/services/categoryApi";
 import { useGetItemsQuery } from "@/redux/services/itemApi";
 
 const FALLBACK_IMAGE = "/img/electronics.png";
+const HOMEPAGE_ITEM_COUNT = 12;
+
+function responsiveItemVisibility(index: number) {
+  if (index < 3) return "";
+  if (index < 6) return "hidden sm:block";
+  if (index < 9) return "hidden md:block";
+  return "hidden lg:block";
+}
 
 function getImage(item: Item) {
   if (item.primaryImageUrl) return item.primaryImageUrl;
@@ -17,7 +25,11 @@ function getImage(item: Item) {
 }
 
 export default function ApiItemsSection() {
-  const { data, isLoading, isError, refetch } = useGetItemsQuery({ pageNumber: 0, pageSize: 4, available: true });
+  const { data, isLoading, isError, refetch } = useGetItemsQuery({
+    pageNumber: 0,
+    pageSize: HOMEPAGE_ITEM_COUNT,
+    available: true,
+  });
   const { data: categories = [] } = useGetCategoriesQuery();
   const items = data?.content ?? [];
   const categoryNames = useMemo(
@@ -39,7 +51,12 @@ export default function ApiItemsSection() {
 
       {isLoading ? (
         <div className="grid grid-cols-1 gap-6 px-[18px] sm:grid-cols-2 sm:px-8 md:grid-cols-3 lg:grid-cols-4">
-          {Array.from({ length: 4 }, (_, index) => <div key={index} className="h-80 animate-pulse rounded-2xl bg-neutral-100" />)}
+          {Array.from({ length: HOMEPAGE_ITEM_COUNT }, (_, index) => (
+            <div
+              key={index}
+              className={`${responsiveItemVisibility(index)} h-80 animate-pulse rounded-2xl bg-neutral-100`}
+            />
+          ))}
         </div>
       ) : isError ? (
         <div className="mx-[18px] rounded-2xl border border-red-100 bg-red-50 p-8 text-center sm:mx-8">
@@ -50,8 +67,13 @@ export default function ApiItemsSection() {
         <div className="mx-[18px] rounded-2xl border border-neutral-200 bg-neutral-50 p-10 text-center text-neutral-500 sm:mx-8">No rental items are available yet.</div>
       ) : (
         <div className="grid grid-cols-1 justify-items-center gap-6 px-[18px] sm:grid-cols-2 sm:px-8 md:grid-cols-3 lg:grid-cols-4">
-          {items.map((item) => (
-            <RentalCard key={item.id} id={item.id} category={item.categoryId ? categoryNames.get(String(item.categoryId)) ?? "Rental" : "Rental"} image={getImage(item)} title={item.title ?? "Untitled item"} location={item.locationText ?? "Location unavailable"} rating={item.averageRating ?? 0} price={item.pricePerDay ?? 0} />
+          {items.slice(0, HOMEPAGE_ITEM_COUNT).map((item, index) => (
+            <div
+              key={item.id}
+              className={`${responsiveItemVisibility(index)} w-full max-w-[280px]`}
+            >
+              <RentalCard id={item.id} category={item.categoryId ? categoryNames.get(String(item.categoryId)) ?? "Rental" : "Rental"} image={getImage(item)} title={item.title ?? "Untitled item"} location={item.locationText ?? "Location unavailable"} rating={item.averageRating ?? 0} price={item.pricePerDay ?? 0} condition={item.condition} featured={item.featured} available={item.available} totalReviews={item.totalReviews} />
+            </div>
           ))}
         </div>
       )}

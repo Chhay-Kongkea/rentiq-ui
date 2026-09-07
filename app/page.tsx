@@ -1,5 +1,6 @@
 "use client";
 
+import AdvertisementBanner from "@/components/advertisement-banner";
 import ApiItemsSection from "@/components/api-items-section";
 import CategoriesSection from "@/components/categories-section";
 import Footer from "@/components/footer";
@@ -16,6 +17,7 @@ export default function HomePage() {
     <main className="min-h-screen bg-white">
       <div className="mt-[-25px]"><HeroBanner /></div>
       <RevealSection><CategoriesSection /></RevealSection>
+      <AdvertisementBanner />
       <RevealSection delay={80}><ApiItemsSection /></RevealSection>
 
       <RevealSection direction="left">
