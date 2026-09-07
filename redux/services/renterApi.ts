@@ -18,7 +18,6 @@ import type {
   ReviewResponse,
   UpdateBookingStatusRequest,
   UpdateDisputeRequest,
-  UpdateOfferRequest,
   UpsertInspectionRequest,
   WalletResponse,
   WalletTransactionResponse,
@@ -79,10 +78,7 @@ export const renterApi = api.injectEndpoints({
     getDispute: builder.query<DisputeResponse, Id>({ query: (id) => `/disputes/${id}` }),
     updateDispute: builder.mutation<DisputeResponse, { id: Id; body: UpdateDisputeRequest }>({ query: ({ id, body }) => ({ url: `/disputes/${id}`, method: "PATCH", body }), invalidatesTags: ["Renter"] }),
 
-    createOffer: builder.mutation<OfferResponse, { requestId: Id; body: Body }>({ query: ({ requestId, body }) => ({ url: `/item-requests/${requestId}/offers`, method: "POST", body }), invalidatesTags: ["Renter"] }),
     getOffer: builder.query<OfferResponse, Id>({ query: (id) => `/offers/${id}`, providesTags: (_result, _error, id) => [{ type: "Renter", id }] }),
-    updateOffer: builder.mutation<OfferResponse, { offerId: Id; body: UpdateOfferRequest }>({ query: ({ offerId, body }) => ({ url: `/offers/${offerId}`, method: "PATCH", body }), invalidatesTags: ["Renter"] }),
-    withdrawOffer: builder.mutation<void, Id>({ query: (id) => ({ url: `/offers/${id}`, method: "DELETE" }), invalidatesTags: ["Renter"] }),
     acceptOffer: builder.mutation<OfferResponse, { requestId: Id; offerId: Id }>({ query: ({ requestId, offerId }) => ({ url: `/item-requests/${requestId}/offers/${offerId}/accept`, method: "PATCH" }), invalidatesTags: ["Renter"] }),
     rejectOffer: builder.mutation<OfferResponse, { requestId: Id; offerId: Id }>({ query: ({ requestId, offerId }) => ({ url: `/item-requests/${requestId}/offers/${offerId}/reject`, method: "PATCH" }), invalidatesTags: ["Renter"] }),
 
@@ -125,8 +121,6 @@ export const renterApi = api.injectEndpoints({
     getMyReport: builder.query<ReportResponse, Id>({ query: (id) => `/reports/${id}` }),
 
     uploadImage: builder.mutation<ImageUploadResponse, FormData>({ query: (body) => ({ url: "/images/upload", method: "POST", body }) }),
-    getImage: builder.query<ImageUploadResponse, Id>({ query: (id) => `/images/${id}` }),
-    deleteImage: builder.mutation<void, Id>({ query: (id) => ({ url: `/images/${id}`, method: "DELETE" }) }),
     getCategoryItems: builder.query<import("@/lib/types/item.types").Item[], { id: Id; params?: PageParams }>({ query: ({ id, params }) => ({ url: `/categories/${id}/items`, params }) }),
     getCategoryChildren: builder.query<import("@/lib/types/category.types").Category[], Id>({ query: (id) => `/categories/${id}/children` }),
   }),
@@ -138,10 +132,10 @@ export const {
   useGetMyBookingsQuery, useGetBookingQuery, useUpdateBookingStatusMutation, useGetBookingStatusHistoryQuery, useLazyGetBookingReceiptQuery, useGetBookingQrCodeQuery, useLazyGetBookingInvoiceQuery, useCreateBookingReviewMutation,
   useGetInspectionQuery, useCreateInspectionMutation, useUpdateInspectionMutation, useGetInspectionImagesQuery, useAddInspectionImagesMutation, useDeleteInspectionImageMutation,
   useGetBookingDisputesQuery, useCreateBookingDisputeMutation, useGetDisputeQuery, useUpdateDisputeMutation,
-  useCreateOfferMutation, useGetOfferQuery, useUpdateOfferMutation, useWithdrawOfferMutation, useAcceptOfferMutation, useRejectOfferMutation,
+  useGetOfferQuery, useAcceptOfferMutation, useRejectOfferMutation,
   useGetOpenItemRequestsQuery, useUpdateItemRequestMutation, useCancelItemRequestMutation, useGetNearbyItemRequestsQuery,
   useGetWalletQuery, useGetWalletTransactionsQuery, useGetWalletTransactionQuery,
   useGetSearchSuggestionsQuery, useSearchNearbyQuery, useGetSearchLogsQuery, useGetNearbyItemsQuery, useGetItemReviewsQuery, useGetItemAvailabilityQuery,
   useGetReviewQuery, useUpdateReviewMutation, useDeleteReviewMutation, useAttachReviewImagesMutation, useRemoveReviewImageMutation, useCreateReportMutation, useGetMyReportsQuery, useGetMyReportQuery,
-  useUploadImageMutation, useGetImageQuery, useDeleteImageMutation, useGetCategoryItemsQuery, useGetCategoryChildrenQuery,
+  useUploadImageMutation, useGetCategoryItemsQuery, useGetCategoryChildrenQuery,
 } = renterApi;
