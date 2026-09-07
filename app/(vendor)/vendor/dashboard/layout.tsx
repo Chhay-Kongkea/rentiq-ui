@@ -12,6 +12,8 @@ import {
   faInbox,
   faCalendarCheck,
   faListCheck,
+  faBullhorn,
+  faRectangleAd,
   faChartLine,
   faWallet,
   faBell,
@@ -39,6 +41,8 @@ export default function VendorDashboardLayout({
     { name: "Requests", href: "/vendor/dashboard/requests", icon: faInbox },
     { name: "Booking", href: "/vendor/dashboard/booking", icon: faCalendarCheck, count: pendingBookings },
     { name: "Listings", href: "/vendor/dashboard/listings", icon: faListCheck },
+    { name: "Promotions", href: "/vendor/dashboard/promotions", icon: faBullhorn },
+    { name: "Advertisements", href: "/vendor/dashboard/advertisements", icon: faRectangleAd },
     { name: "Earnings", href: "/vendor/dashboard/earnings", icon: faChartLine },
     { name: "Reviews", href: "/vendor/dashboard/reviews", icon: faStar },
     { name: "Wallet", href: "/vendor/dashboard/wallet", icon: faWallet },
@@ -70,7 +74,7 @@ export default function VendorDashboardLayout({
             <FontAwesomeIcon icon={isMobileMenuOpen ? faXmark : faBars} className="h-5 w-5" />
           </button>
           <img
-            src="/img/Rentiq.png"
+            src="/img/rentiq.png"
             alt="Rentiq Logo"
             className="h-7 w-auto object-contain"
           />
@@ -102,7 +106,7 @@ export default function VendorDashboardLayout({
           <div className="mb-6 flex items-center justify-between">
             <div className="h-10 w-32 flex items-center">
               <img
-                src="/img/Rentiq.png"
+                src="/img/rentiq.png"
                 alt="Rentiq Logo"
                 className="h-auto max-h-10 w-auto object-contain"
               />

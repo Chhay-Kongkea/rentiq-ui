@@ -15,7 +15,7 @@ export default function Footer() {
             <div className="flex items-center gap-2 mb-4">
               <Link href="/" className="flex items-center gap-2">
                 <Image
-                  src="/img/Rentiq.png"
+                  src="/img/rentiq.png"
                   alt="Rentiq Logo"
                   width={120}
                   height={40}
