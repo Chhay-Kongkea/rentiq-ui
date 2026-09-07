@@ -38,7 +38,7 @@ export default function VendorDashboardPage() {
   const cards = [
     {
       label: "Total earnings",
-      value: money(performance?.totalEarnings, wallet?.currency || "USD"),
+      value: money(performance?.completedBookingValue ?? performance?.totalEarnings, wallet?.currency || "USD"),
       detail: `${performance?.completedBookings ?? 0} completed bookings`,
       icon: faChartLine,
     },

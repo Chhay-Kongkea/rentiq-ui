@@ -4,8 +4,8 @@ const METHODS_WITHOUT_BODY = new Set(["GET", "HEAD"]);
 const BODYLESS_RESPONSE_STATUSES = new Set([204, 205, 304]);
 
 function getBackendApiBaseUrl(): URL {
-  const configuredUrl = process.env.BACKEND_API_URL;
-  if (!configuredUrl) throw new Error("BACKEND_API_URL is not configured");
+  const configuredUrl = process.env.NEXT_PUBLIC_API_URL;
+  if (!configuredUrl) throw new Error("NEXT_PUBLIC_API_URL is not configured");
 
   return new URL(
     "api/v1/",

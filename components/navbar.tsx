@@ -90,9 +90,10 @@ const pathname = usePathname();
   const { data: searchCategories = [] } = useGetCategoriesQuery();
   const { data: session, status } = useSession();
   const isLoggedIn = status === "authenticated";
-  const { data: bookings = [] } = useGetMyBookingsQuery(undefined, { skip: !isLoggedIn });
+  const isVendor = session?.user?.role?.toUpperCase() === "VENDOR";
   const displayName = session?.user?.name ?? session?.user?.email ?? "User";
   const initials = getInitials(session?.user?.name, session?.user?.email);
+  const { data: bookings = [] } = useGetMyBookingsQuery(undefined, { skip: !isLoggedIn });
 
   // Helper to check active tab based on current route
   const isActive = (path: string) => pathname === path;
@@ -311,9 +312,9 @@ const pathname = usePathname();
                     <DropdownMenuSeparator className="m-0 bg-gray-100" />
 
                     <DropdownMenuGroup>
-                      <DropdownMenuItem onClick={() => router.push("/user/become-vendor")} className="cursor-pointer gap-3 rounded-lg px-3 py-2.5 font-semibold text-gray-900 focus:bg-gray-50">
+                      <DropdownMenuItem onClick={() => router.push(isVendor ? "/vendor/dashboard" : "/user/become-vendor")} className="cursor-pointer gap-3 rounded-lg px-3 py-2.5 font-semibold text-gray-900 focus:bg-gray-50">
                         <Store className="size-4 text-red-600" />
-                        <span>Become a Vendor</span>
+                        <span>{isVendor ? "Vendor dashboard" : "Become a Vendor"}</span>
                       </DropdownMenuItem>
                     </DropdownMenuGroup>
 
