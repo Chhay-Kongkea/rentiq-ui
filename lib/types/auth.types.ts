@@ -15,6 +15,8 @@ export interface RegisterResponse {
   lastName: string;
 }
 
+
+
 export interface LoginRequest {
   username: string;
   password: string;
