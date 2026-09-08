@@ -317,19 +317,24 @@ export interface WalletTransactionResponse {
   createdAt?: string;
 }
 
+export type TopupRequestStatus = "PENDING" | "SUCCESS" | "EXPIRED";
+
+/** Response of GET/POST /wallets/me/topup-requests */
 export interface TopupRequestResponse {
   id: string;
   walletId: string;
   amount: number;
   paymentMethod?: string;
-  status: "PENDING" | "SUCCESS" | "EXPIRED";
+  status: TopupRequestStatus;
   bankReference?: string;
   createdAt?: string;
 }
 
+/** Body for POST /wallets/me/topup-requests */
 export interface CreateTopupRequest {
   amount: number;
   paymentMethod?: string;
+  bankReference?: string;
 }
 
 export interface NotificationResponse {

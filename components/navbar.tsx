@@ -430,7 +430,7 @@ const pathname = usePathname();
         </div>
 
         {/* BOTTOM FLOATING SEARCH BAR */}
-        <div className={`${pathname.startsWith("/user/profile") || pathname.startsWith("/user/become-vendor") ? "hidden" : "flex"} justify-center pb-4 pt-1`}>
+        <div className={`${pathname.startsWith("/user/profile") || pathname.startsWith("/user/become-vendor") || pathname.startsWith("/terms-and-policy") ? "hidden" : "flex"} justify-center pb-4 pt-1`}>
           <form onSubmit={handleSearch} className="flex w-full max-w-3xl items-center justify-between rounded-full border border-gray-300 bg-white py-1.5 pl-6 pr-2 shadow-sm transition-shadow hover:shadow-md focus-within:border-[#253C95]/40 focus-within:shadow-md">
             <DropdownMenu>
               <DropdownMenuTrigger render={<button type="button" className="flex min-w-0 flex-1 cursor-pointer flex-col items-start text-left focus:outline-none"><span className="text-xs font-semibold text-neutral-800">Categories</span><span className="max-w-36 truncate text-xs text-neutral-400">{selectedCategoryName}</span></button>} />

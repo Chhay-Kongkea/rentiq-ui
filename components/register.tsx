@@ -429,9 +429,15 @@ export default function RegisterForm() {
                       className="text-xs font-normal leading-5 text-neutral-600 cursor-pointer select-none"
                     >
                       I agree to the{" "}
-                      <span className="font-medium text-[#F73030] hover:underline">
+                      <Link
+                        href="/terms-and-policy?tab=terms"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="font-medium text-[#F73030] hover:underline"
+                      >
                         Terms & Conditions
-                      </span>
+                      </Link>
                     </FieldLabel>
                   </Field>
                 )}
@@ -456,9 +462,15 @@ export default function RegisterForm() {
                       className="text-xs font-normal leading-5 text-neutral-600 cursor-pointer select-none"
                     >
                       I accept the{" "}
-                      <span className="font-medium text-[#F73030] hover:underline">
+                      <Link
+                        href="/terms-and-policy?tab=privacy"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="font-medium text-[#F73030] hover:underline"
+                      >
                         Privacy Policy
-                      </span>
+                      </Link>
                     </FieldLabel>
                   </Field>
                 )}

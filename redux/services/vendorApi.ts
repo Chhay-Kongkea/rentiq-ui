@@ -7,9 +7,9 @@ import type {
   CreateAvailabilityBlockRequest,
   CreateItemRequest,
   CreateOfferRequest,
-  CreateTopupRequest,
   CreateDisputeRequest,
   CreateReportRequest,
+  CreateTopupRequest,
   DisputeResponse,
   AddInspectionImagesRequest,
   ImageUploadResponse,
@@ -278,16 +278,20 @@ export const vendorApi = api.injectEndpoints({
     getVendorWalletTransaction: builder.query<WalletTransactionResponse, string>({
       query: (transactionId) => `/wallets/me/transactions/${encodeURIComponent(transactionId)}`,
     }),
+
+    // Wallet top-up requests: the vendor submits a request; the admin confirms the
+    // transfer, which moves it to SUCCESS and credits the wallet.
     getVendorTopupRequests: builder.query<SpringPage<TopupRequestResponse>, Paging | void>({
       query: (paging) => ({ url: "/wallets/me/topup-requests", params: pageableParams(paging ?? {}) }),
       providesTags: [{ type: "Wallet", id: "TOPUPS" }],
     }),
-    getVendorTopupRequest: builder.query<TopupRequestResponse, string>({
-      query: (topupRequestId) => `/wallets/me/topup-requests/${encodeURIComponent(topupRequestId)}`,
-    }),
     createVendorTopupRequest: builder.mutation<TopupRequestResponse, CreateTopupRequest>({
       query: (body) => ({ url: "/wallets/me/topup-requests", method: "POST", body }),
-      invalidatesTags: [{ type: "Wallet", id: "ME" }, { type: "Wallet", id: "TRANSACTIONS" }, { type: "Wallet", id: "TOPUPS" }],
+      invalidatesTags: [
+        { type: "Wallet", id: "TOPUPS" },
+        { type: "Wallet", id: "ME" },
+        { type: "Wallet", id: "TRANSACTIONS" },
+      ],
     }),
 
     // Notifications
@@ -427,7 +431,6 @@ export const {
   useGetVendorWalletTransactionsQuery,
   useGetVendorWalletTransactionQuery,
   useGetVendorTopupRequestsQuery,
-  useGetVendorTopupRequestQuery,
   useCreateVendorTopupRequestMutation,
   useGetVendorNotificationsQuery,
   useGetVendorNotificationQuery,
