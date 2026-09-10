@@ -228,7 +228,7 @@ function BookingDetailContent() {
               ) : null}
             </section>
 
-            {booking.status === "RENTED" || booking.status === "APPROVED" ? <QrCodeCard bookingId={bookingId} /> : null}
+            <QrCodeCard bookingId={bookingId} />
           </aside>
         </div>
       </div>
@@ -300,13 +300,55 @@ function BookingDocumentButton({ booking, item, kind, label }: { booking: Bookin
 }
 
 function QrCodeCard({ bookingId }: { bookingId: string }) {
-  const { data, isLoading } = useGetBookingQrCodeQuery(bookingId);
-  if (isLoading || !data?.qrImageBase64) return null;
+  const { data, isLoading, isError, refetch } = useGetBookingQrCodeQuery(bookingId, {
+    skip: !bookingId,
+    refetchOnFocus: true,
+  });
+
+  if (isLoading) {
+    return (
+      <section className="rounded-2xl border border-slate-100 bg-white p-6 text-center shadow-sm">
+        <h2 className="flex items-center justify-center gap-2 text-sm font-bold text-slate-800">
+          <QrCode className="size-4" /> Handover QR code
+        </h2>
+        <p className="mt-4 text-xs text-slate-400">Loading QR code...</p>
+      </section>
+    );
+  }
+
+  if (isError) {
+    return (
+      <section className="rounded-2xl border border-slate-100 bg-white p-6 text-center shadow-sm">
+        <h2 className="flex items-center justify-center gap-2 text-sm font-bold text-slate-800">
+          <QrCode className="size-4" /> Handover QR code
+        </h2>
+        <p className="mt-3 text-xs text-slate-400">The QR code is not available for this booking yet.</p>
+        <button type="button" onClick={() => refetch()} className="mt-3 text-xs font-semibold text-[#253C95] hover:underline">
+          Try again
+        </button>
+      </section>
+    );
+  }
+
+  if (!data) return null;
+
+  const qrImage = data.qrImageBase64
+    ? data.qrImageBase64.startsWith("data:")
+      ? data.qrImageBase64
+      : `data:image/png;base64,${data.qrImageBase64}`
+    : "";
+
   return (
     <section className="rounded-2xl border border-slate-100 bg-white p-6 text-center shadow-sm">
       <h2 className="flex items-center justify-center gap-2 text-sm font-bold text-slate-800"><QrCode className="size-4" /> Handover QR code</h2>
-      <img src={`data:image/png;base64,${data.qrImageBase64}`} alt="Booking QR code" className="mx-auto mt-4 size-40" />
+      {qrImage ? (
+        <img src={qrImage} alt="Booking QR code" className="mx-auto mt-4 size-40 rounded-lg border border-slate-100 bg-white p-1" />
+      ) : (
+        <p className="mt-4 text-xs text-slate-400">The server returned a QR token without an image.</p>
+      )}
       <p className="mt-3 text-xs text-slate-400">Show this to the owner at pickup or return.</p>
+      {data.expiresAt ? <p className="mt-1 text-[11px] text-slate-400">Expires {formatDateTime(data.expiresAt)}</p> : null}
+      {data.qrToken ? <p className="mt-2 break-all font-mono text-[10px] text-slate-300">Token: {data.qrToken}</p> : null}
     </section>
   );
 }
